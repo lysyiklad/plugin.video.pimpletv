@@ -10,6 +10,7 @@ import locale
 import urllib2
 
 import xbmcaddon
+import xbmc
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -23,15 +24,16 @@ __media__ = os.path.join(__path__, 'resources', 'media')
 __image__ = os.path.join(__media__, 'image')
 __libs__ = os.path.join(__path__, 'resources', 'libs')
 
-MAX_LENGTH_TEXT = 420
+MAX_LENGTH_TEXT = 390
 
 # FONT_LARGE = ImageFont.truetype("resources/libs/BanderaProLight.otf", 40)
-# FONT_LARGE_BOLD = ImageFont.truetype("resources/libs/BanderaPro-Bold.otf", 40)
-# FONT_SMALL = ImageFont.truetype("resources/libs/BanderaPro.otf", 24)
-FONT_LARGE = ImageFont.truetype(os.path.join(__libs__, 'ubuntu.ttf'), 40)
-FONT_LARGE_BOLD = ImageFont.truetype(os.path.join(__libs__, 'ubuntu.ttf'), 44)
-FONT_SMALL = ImageFont.truetype(os.path.join(__libs__, 'ubuntu.ttf'), 24)
+FONT_LARGE_BOLD = ImageFont.truetype(
+    os.path.join(__libs__, "BanderaPro-Bold.otf"), 54)
+FONT_SMALL = ImageFont.truetype(os.path.join(__libs__, "BanderaPro.otf"), 30)
 
+#FONT_LARGE = ImageFont.truetype(os.path.join(__libs__, 'ubuntu.ttf'), 40)
+# FONT_LARGE_BOLD = ImageFont.truetype(os.path.join(__libs__, 'ubuntu.ttf'), 52)
+# FONT_SMALL = ImageFont.truetype(os.path.join(__libs__, 'ubuntu.ttf'), 30)
 
 def _http_get_image(url):
     try:
@@ -50,12 +52,14 @@ def _http_get_image(url):
 
 def _cuttext(text, font, maxlength_text=MAX_LENGTH_TEXT):
     w, h = font.getsize(text)
-
+    print '2 ********************* %s %d %d \n' % (text.encode('utf-8'), w, h)
     if w > maxlength_text:
+        print '3 ********************* %s %d %d \n' % (
+            text.encode('utf-8'), w, maxlength_text)
         for i, ch in enumerate(text):
-            print(text[0:i])
+            #print(text[0:i])
             w, h = font.getsize(text[0:i])
-            print(w)
+            #print(w)
             if w > maxlength_text:
                 text = text[0:i]
                 text += '...'
@@ -73,24 +77,35 @@ def _draw_text(draw, text, font, width_bkg, padding_top):
     draw.text((_get_indent_left_for_center(text, width_bkg, font), padding_top), text, (0, 0, 0), font=font)
 
 def create(**kwargs):
-    thumb = os.path.join(kwargs['dir'], '%s_%s.png' % (kwargs['date_broadcast'], kwargs['match']))
-    if not os.path.exists(thumb):
+    thumb = os.path.join(kwargs['dir'], '%s_%s.png' %
+                         (kwargs['date_broadcast'], kwargs['match']))
+    
+    
+    thumb_cached = xbmc.getCacheThumbName(thumb)
+    thumb_cached = thumb_cached.replace('tbn', 'png')
+    thumb_cached = os.path.join(os.path.join(xbmc.translatePath("special://thumbnails"), thumb_cached[0], thumb_cached))
+    print '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s' % thumb_cached
+    if not os.path.exists(thumb_cached):
         ifon = Image.open(os.path.join(__image__, 'fon.png'))
         draw = ImageDraw.Draw(ifon)
         league = _cuttext(kwargs['league'], FONT_SMALL)
         vs = u'vs'
-        d = kwargs['date_broadcast'].strftime(u"%A %d %B %Y").decode('utf-8')
+        a = kwargs['date_broadcast'].strftime(u"%A").decode('utf-8')
+        d = kwargs['date_broadcast'].strftime(u"%d %B %Y").decode('utf-8')
         t = kwargs['date_broadcast'].strftime(u"%H:%M").decode('utf-8')
 
-        com_home = _cuttext(kwargs['match'].split(u'\u2014')[0].strip(), FONT_LARGE_BOLD)
-        com_away = _cuttext(kwargs['match'].split(u'\u2014')[1].strip(), FONT_LARGE_BOLD)
+        com_home = _cuttext(kwargs['match'].split(
+            u'\u2014')[0].strip(), FONT_LARGE_BOLD)
+        com_away = _cuttext(kwargs['match'].split(
+            u'\u2014')[1].strip(), FONT_LARGE_BOLD)
 
-        _draw_text(draw, league, FONT_SMALL, ifon.size[0], 15)
-        _draw_text(draw, com_home, FONT_LARGE_BOLD, ifon.size[0], 260)
-        _draw_text(draw, vs, FONT_SMALL, ifon.size[0], 320)
-        _draw_text(draw, com_away, FONT_LARGE_BOLD, ifon.size[0], 350)
-        _draw_text(draw, d, FONT_SMALL, ifon.size[0], 430)
-        _draw_text(draw, t, FONT_SMALL, ifon.size[0], 470)
+        _draw_text(draw, league, FONT_SMALL, ifon.size[0], 25)
+        _draw_text(draw, com_home, FONT_LARGE_BOLD, ifon.size[0], 300)
+        _draw_text(draw, vs, FONT_SMALL, ifon.size[0], 380)
+        _draw_text(draw, com_away, FONT_LARGE_BOLD, ifon.size[0], 420)
+        _draw_text(draw, a, FONT_SMALL, ifon.size[0], 550)
+        _draw_text(draw, d, FONT_SMALL, ifon.size[0], 585)
+        _draw_text(draw, t, FONT_LARGE_BOLD, ifon.size[0], 645)
 
         fd = _http_get_image(kwargs['home_logo'])
         image_file = io.BytesIO(fd)
@@ -106,9 +121,11 @@ def create(**kwargs):
         ic2.thumbnail((150, 150), Image.ANTIALIAS)
         ic2 = ic2.convert("RGBA")
 
-        ifon.paste(ic1, (50, 80), ic1)
-        ifon.paste(ic2, (300, 80), ic2)
+        ifon.paste(ic1, (50, 100), ic1)
+        ifon.paste(ic2, (270, 100), ic2)
 
         ifon.save(thumb)
+
+        #os.remove(thumb)
 
     return thumb

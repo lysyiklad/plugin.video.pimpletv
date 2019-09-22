@@ -57,6 +57,20 @@ class rus_parserinfo(parserinfo):
               (u"дек", u"Декабря")]
 
 
+MONTHS = {"января": "January",
+          "февраля": "February",
+          "марта": "March",
+          "апреля": "April",
+          "мая": "May",
+          "июня": "June",
+          "июля": "July",
+          "августа": "August",
+          "сентября": "September",
+          "октября": "October",
+          "ноября": "November",
+          "декабря": "December"}
+
+
 def GET_FILE(file):
     with open(file, 'rt') as f:  # errors='ignore'
         try:
@@ -69,10 +83,11 @@ def GET_FILE(file):
 def dbg_log(line):
     if __addon__.getSetting('is_debug') == 'true':
         if isinstance(line, unicode):
-            xbmc.log('%s [v.%s]: %s' %
-                     (ID_PLUGIN, __version__, line.encode('utf-8')))
+            xbmc.log('%s [v.%s]: %s %s' %
+                     (ID_PLUGIN, __version__, line.encode('utf-8'), type(line)))
         else:
-            xbmc.log('%s [v.%s]: %s' % (ID_PLUGIN, __version__, line))
+            xbmc.log('%s [v.%s]: %s %s' %
+                     (ID_PLUGIN, __version__, line, type(line)))
 
 
 def _http_get(url):
@@ -174,13 +189,16 @@ tzs = 3
 
 def get_matches():
     html = GET_FILE(os.path.join(__path__, 'PimpleTV.html'))
+    #html = _http_get(SITE)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
 
     streams_day_soup = soup.findAll('div', {'class': 'streams-day'})
 
     for day_soup in streams_day_soup:
-        day = u'%s %s %s' % (day_soup.text, datetime.datetime.now().year, '%s')
+        #day = u'%s %s %s' % (day_soup.text, datetime.datetime.now().year, '%s')
+        day = '%s %s %s %s' % (day_soup.text.split()[0], MONTHS[day_soup.text.split()[
+                               1].encode('utf-8')], datetime.datetime.now().year, '%s')
         dbg_log(day)
 
         # dbg_log(day_soup.nextSibling())
@@ -199,7 +217,8 @@ def get_matches():
                         # dbg_log(col.find('div', 'bottom-line').span.text)
 
                         str_time = col.find('div', 'bottom-line').span.text
-                        dt = parse(day % str_time, parserinfo=rus_parserinfo())
+                        #dt = parse(day % str_time, parserinfo=rus_parserinfo())
+                        dt = parse(day % str_time.encode('utf-8'))
                         tz = tzoffset(None, tzs * 3600)
                         dt = dt.replace(tzinfo=tz)
                         date_local = dt.astimezone(tzlocal())
@@ -228,7 +247,8 @@ def get_matches():
 
                         yield {'label': label.encode('utf-8'),
                                'thumb': thumb,
-                               'fanart': thumb,
+                               #'fanart': os.path.join(__addon__, 'fanart.jpg'),
+                               'art': {'clearart': thumb, 'poster': thumb},
                                'info': {'video': {'title': date_local.strftime('%H:%M - %d.%m.%Y'),
                                                   'plot': plot.encode('utf-8')}},
                                'icon': os.path.join(__image__, 'm.png'),
