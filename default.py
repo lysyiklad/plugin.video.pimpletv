@@ -188,8 +188,8 @@ def root():
 tzs = 3
 
 def get_matches():
-    html = GET_FILE(os.path.join(__path__, 'PimpleTV.html'))
-    #html = _http_get(SITE)
+    #html = GET_FILE(os.path.join(__path__, 'PimpleTV.html'))
+    html = _http_get(SITE)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
 
@@ -200,9 +200,18 @@ def get_matches():
         day = '%s %s %s %s' % (day_soup.text.split()[0], MONTHS[day_soup.text.split()[
                                1].encode('utf-8')], datetime.datetime.now().year, '%s')
         dbg_log(day)
+        # yield {'label': day.encode('utf-8'),
+        #        #'thumb': thumb,
+        #        #'fanart': os.path.join(__addon__, 'fanart.jpg'),
+        #        #'art': {'clearart': thumb, 'poster': thumb},
+        #        #'info': {'video': {'title': date_local.strftime('%H:%M - %d.%m.%Y'),
+        #        #                   'plot': plot.encode('utf-8')}},
+        #        #'icon': os.path.join(__image__, 'm.png'),
+        #        #'content_lookup': False,
+        #        'is_folder': False,
+        #        'is_playable': False,
+        #        'url': ''}
 
-        # dbg_log(day_soup.nextSibling())
-        # lll = list(day_soup.next_siblings)
         for row in list(day_soup.next_siblings):
             try:
                 # print(row['class'])
@@ -227,7 +236,8 @@ def get_matches():
                         match = col.find('div', 'live-teams').text
 
                         league = col.find('div', 'broadcast-category').text
-                        label = u'%s   [ %s ]' % (match, league)
+                        label = u'%s  %s' % (date_local.strftime(
+                            '%H:%M - %d.%m.%Y'), match)
                         plot = u'%s\n%s\n%s' % (date_local.strftime(
                             '%H:%M - %d.%m.%Y'), league, match)
 
