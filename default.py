@@ -10,6 +10,7 @@ import urllib
 
 from resources.lib.pimpletv import PimpleTV
 from resources.lib.plugin import PimpletvPlugin
+import resources.lib.database
 
 # from simpleplugin import RoutedPlugin
 # plugin = RoutedPlugin()
@@ -32,20 +33,22 @@ from resources.lib.plugin import PimpletvPlugin
 
 plugin = PimpletvPlugin()
 
-pimpletv = PimpleTV(plugin)
+db = resources.lib.database.DB(plugin)
+
+#pimpletv = PimpleTV(plugin)
 
 
 @plugin.action()
 def root():
-    #matches = get_matches()
+    # plugin.log(list(pimpletv.matches()))
+    # return pimpletv.matches()
     select_item = [{'label': '[COLOR FF0084FF][B]ВЫБРАТЬ ТУРНИРЫ[/B][/COLOR]',
                     'url': plugin.get_url(action='select_matches')},
                    {'label': '[COLOR FF0084FF][B]ОБНОВИТЬ[/B][/COLOR]',
                     'url': plugin.get_url(action='update_cache')}, ]
     #return plugin.create_listing(select_item + matches, content='tvseries',
     #                              view_mode=55, sort_methods={'sortMethod': xbmcplugin.SORT_METHOD_NONE, 'label2Mask': '% J'})
-    plugin.log(list(pimpletv.matches()))
-    return pimpletv.matches()
+    return select_item
 
 
 if __name__ == '__main__':

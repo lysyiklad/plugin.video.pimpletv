@@ -43,8 +43,8 @@ def create_id_match(date_broadcast, match):
 
 def format_timedelta(dt, pref):
     h = int(dt.seconds / 3600)
-    return '{} {} {} {:02} мин.'.format(pref, '%s дн.' % dt.days if dt.days else '',
-                                       '%s ч.' % h if h else '', int(dt.seconds % 3600 / 60))
+    return u'{} {} {} {:02} мин.'.format(pref, u'%s дн.' % dt.days if dt.days else u'',
+                                       u'%s ч.' % h if h else u'', int(dt.seconds % 3600 / 60))
 
 
 class PimpleTV(object):
@@ -246,8 +246,8 @@ class PimpleTV(object):
         self._plugin.log('1111111111111111111111111111')
         now_date = datetime.datetime.now().replace(tzinfo=tzlocal())
 
-        # match = self._db.get_match(668941931662562689)
-        # self._plugin.log(match.id)
+        match = self._db.get_match(668941931662562689)
+        self._plugin.log(match.id)
 
         yield {'label': 'str(match.id)',
                'url': self._plugin.get_url(action='links', id=131323132121), }

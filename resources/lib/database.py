@@ -16,17 +16,18 @@ import sys
 
 from .peewee import *
 
+print 'ddddddddddddddddddddddddddddddddddddddddddddd'
 
 class DB(object):
     def __init__(self, plugin):
         self._plugin = plugin
-        #self.db = SqliteDatabase(os.path.join(self._plugin.userdata(), 'match.db'), pragmas={'foreign_keys': 1})
-        self.db = SqliteDatabase(os.path.join(self._plugin.userdata(), 'match.db'))
+        self.db = SqliteDatabase(os.path.join(self._plugin.userdata(), 'match.db'), pragmas={'foreign_keys': 1})
+        #self.db = SqliteDatabase(os.path.join(self._plugin.userdata(), 'match.db'))
 
         self.match = self.get_model_match()
         self.link = self.get_model_link()
         self._plugin.log('****************** %s --- %s' %
-                         (sys.version, self.get_match(668941931662562689)))
+                         (os.path.join(self._plugin.userdata(), 'match.db'), self.get_match(668941931662562689)))
         # for m in self.match.select():
         #     self._plugin.log('*********m.id********* %s' % type(m))
 
