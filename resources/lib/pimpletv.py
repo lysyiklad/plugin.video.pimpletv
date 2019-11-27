@@ -7,10 +7,10 @@ from dateutil.tz import tzlocal, tzoffset
 from dateutil.parser import *
 import urllib2
 
-from .database import DB
+from .database import Match, Link
 from .makepic import CreatePictures
 
-ID_PLUGIN = 'plugin.video.pimpletv'
+#ID_PLUGIN = 'plugin.video.pimpletv'
 
 SITE = 'https://www.pimpletv.ru'
 
@@ -52,8 +52,7 @@ class PimpleTV(object):
 
     def __init__(self, plugin):
         self._plugin = plugin
-        self._db = DB(self._plugin)
-        self._picmake = CreatePictures(self._plugin)
+        self._picmake = CreatePictures(self._plugin)   
 
     def _http_get(self, url):
         try:
@@ -67,8 +66,7 @@ class PimpleTV(object):
             resp.close()
             return http
         except Exception as e:
-            print('[%s]: GET EXCEPT [%s]' % (ID_PLUGIN, e), 4)
-            self._plugin.log(url)
+            self._plugin.log('GET EXCEPT [%s]' % e)
 
     def update(self):
 
@@ -122,29 +120,29 @@ class PimpleTV(object):
 
                             league = col.find('div', 'broadcast-category').text
 
-                            poster, thumb, fanart, icon = self._picmake.create(
+                            poster, thumb, fanart = self._picmake.create(
                                 home_logo=SITE + col.find('div', 'home-logo').img['src'],
                                 away_logo=SITE + col.find('div', 'away-logo').img['src'],
                                 # home_logo=os.path.join(self._plugin.media(), 'home.png'),
                                 # away_logo=os.path.join(self._plugin.media(), 'away.png'),
                                 id=id, date_broadcast=date_local, match=match, league=league)
 
-                            matchdb = self._db.get_match(id)
+                            matchdb = Match.getMatch(id)
                             if matchdb is None:
-                                self._db.add_match(time=time_scan,
+                                Match.addMatch(time=time_scan,
                                                    id=id,
                                                    match=match,
                                                    league=league,
                                                    date_broadcast=date_local,
                                                    thumb=thumb,
-                                                   icon=icon,
+                                                   icon=poster,
                                                    poster=poster,
                                                    fanart=fanart,
                                                    url_links=SITE + col.find('div', 'live-teams').a['href'])
                             else:
                                 matchdb.time = time_scan
                                 matchdb.thumb = thumb
-                                matchdb.icon = icon
+                                matchdb.icon = poster
                                 matchdb.poster = poster
                                 matchdb.fanart = fanart
 
@@ -155,7 +153,7 @@ class PimpleTV(object):
                 except Exception as e:
                     print('PimpleTV.update() - error - %s' % e)
 
-        # matchs_db = self._db.match.select()
+        # matchs_db = Match.select()
         # # Определяем список файлов картинок, которые должны быть
         # active_artwork = []
         # for id in ids:
@@ -177,15 +175,15 @@ class PimpleTV(object):
         #         # удаляем картинки из системы
         #         os.remove(match_db.poster)
         #         # удаляем матч из базы
-        #         self._db.delete_match(match_db.id)
+        #         Match.deleteMatch(match_db.id)
 
-        # files = os.listdir(self._picmake.target_folder)
+        # files = os.listdir(self._plugin.userdata())
 
         # exception_file = ['match.db']
 
         # for file in files:
         #     if file not in active_artwork and file not in exception_file:
-        #         f = os.path.join(self._picmake.target_folder, file)
+        #         f = os.path.join(self._plugin.userdata(), file)
         #         os.remove(f)
         #         if self._plugin.get_cache_thumb_name:
         #             thumb_cache = self._plugin.get_cache_thumb_name(f)
@@ -194,12 +192,12 @@ class PimpleTV(object):
         #                 os.remove(thumb_cache)
 
     def get_href_match(self, id):
-        links = self._db.get_href_match(id)
+        links = Link.getHrefMatch(id)
         if links is not None:
             return links
 
         # html = GET_FILE(os.path.join(self._plugin.path(), 'Link1.html'))
-        html = self._http_get(self._db.get_url_href(id))
+        html = self._http_get(Match.getUrlHref(id))
 
         soup = bs4.BeautifulSoup(html, 'html.parser')
 
@@ -222,14 +220,14 @@ class PimpleTV(object):
                 'href': td[5].find('a')['href'],
             })
 
-        self._db.add_link(id, links)
+        Link.addLink(id, links)
 
         return links
 
     def is_not_update(self):
         try:
             # Время сканирования меньше текущего времени на self._plugin.get_setting('delta_scan', True) - мин.
-            if ((datetime.datetime.now() - self._db.date_scan()).seconds / 60) > self._plugin.get_setting('delta_scan',
+            if ((datetime.datetime.now() - Match.dateScan()).seconds / 60) > self._plugin.get_setting('delta_scan',
                                                                                                           True):
                 return False
             #
@@ -242,101 +240,92 @@ class PimpleTV(object):
 
     def matches(self):
 
-        #self.update()
-        self._plugin.log('1111111111111111111111111111')
+       # self.update()
         now_date = datetime.datetime.now().replace(tzinfo=tzlocal())
+        
+        matches = Match.getMatches()
 
-        match = self._db.get_match(668941931662562689)
-        self._plugin.log(match.id)
+        try:
+            for m in matches:
+                date_broadcast = parse(m.date_broadcast)
+                if date_broadcast > now_date:
+                    dt = date_broadcast - now_date
+                    plot = format_timedelta(dt, u'Через')
+                else:
+                    dt = now_date - date_broadcast
+                    if int(dt.total_seconds() / 60) < 110:
+                        plot = u'Прямой эфир %s мин.' % int(dt.total_seconds() / 60)
+                    else:
+                        plot = format_timedelta(dt, u'Закончен')
 
-        yield {'label': 'str(match.id)',
-               'url': self._plugin.get_url(action='links', id=131323132121), }
+                if dt.seconds < -6600:
+                    status = 'FF999999'
+                elif dt.seconds > 0:
+                    status = 'FFFFFFFF'
+                else:
+                    status = 'FFFF0000'
 
+                title = u'[COLOR %s]%s[/COLOR]\n[B]%s[/B]\n[UPPERCASE]%s[/UPPERCASE]' % (
+                    status, date_broadcast.strftime('%d.%m %H:%M'), m.match, m.league)
 
+                label = u'[COLOR %s]%s[/COLOR] - [B]%s[/B]' % (status, date_broadcast.strftime('%H:%M'), m.match)
+                plot = title + '\n\n' + plot
 
-        # # now_date = datetime.datetime(2019, 9, 20, 0, 0, 0).replace(tzinfo=tzlocal())
-        # matches = self._db.get_matches()  #match.select().order_by(self._db.match.date_broadcast)
-        # self._plugin.log('222222222222222222222222222222')
-        # self._plugin.log(type(matches))
-        # self._plugin.log(type(self._db.match))
-        # try:
-        #     for m in matches:
-        #         self._plugin.log('3333333333333333333333333333333')
-        #         date_broadcast = parse(m.date_broadcast)
-        #         if date_broadcast > now_date:
-        #             dt = date_broadcast - now_date
-        #             plot = format_timedelta(dt, 'Через')
-        #         else:
-        #             dt = now_date - date_broadcast
-        #             if int(dt.total_seconds() / 60) < 110:
-        #                 plot = 'Прямой эфир %s мин.' % int(dt.total_seconds() / 60)
-        #             else:
-        #                 plot = format_timedelta(dt, 'Закончен')
+                # self._plugin.log(m.thumb)
+                # self._plugin.log(m.poster)
+                # self._plugin.log(m.fanart)
 
-        #         if dt.seconds < -6600:
-        #             status = 'FF999999'
-        #         elif dt.seconds > 0:
-        #             status = 'FFFFFFFF'
-        #         else:
-        #             status = 'FFFF0000'
+                # yield {'label': m.match,
+                #         'thumb': m.thumb,
+                #         'fanart': m.fanart,
+                #         'art': {'poster': m.poster},
+                #         'info': {'video': {'title':title, 'plot': plot}},
+                #         'icon': m.icon,
+                #         'is_folder': False,
+                #         'is_playable': True,
+                #         'url': self._plugin.get_url(action='links', id=m.id),
+                #         }
 
-        #         label = '[COLOR %s]%s[/COLOR] - [B]%s[/B]   [UPPERCASE]%s[/UPPERCASE]' % (
-        #             status, date_broadcast.strftime('%d.%m %H:%M'), m.match, m.league)
+                yield {
+                    'label': label,
+                    'art': {
+                        'thumb': m.thumb,
+                        'poster': m.poster,
+                        'fanart': m.fanart,
+                        'icon': m.thumb
+                    },
+                    'info': {
+                        'video': {
+                            # 'imdbnumber': ,
+                            # 'count': ,
+                            # 'cast': ,
+                            # 'dateadded': ,
+                            # 'director': ,
+                            # 'genre': ,
+                            # 'country': ,
+                            # 'year': ,
+                            # 'rating': ,
+                            'plot': plot,
+                            # 'plotoutline': ,
+                            # 'title': ,
+                            # 'sorttitle': ,
+                            # 'duration': ,
+                            # 'originaltitle': ,
+                            # 'premiered': ,
+                            # 'votes': ,
+                            # 'trailer': ,
+                            # 'mediatype': ,
+                            # 'tagline': ,
+                            # 'mpaa': ,
+                            # 'playcount': ,
+                        }
+                    },
+                    'is_folder': False,
+                    'is_playable': True,
+                    'url': self._plugin.get_url(action='links', id=m.id),
+                    # 'context_menu': ,
+                    # 'online_db_ids':
+                }
 
-        #         # plot = '%s\nЧерез %s' % (label, str(before_time))
-        #         plot = label + '\n[B]' + plot + '[/B]'
-
-        #         yield {'label': label,
-        #          'thumb': m.thumb,
-        #          'fanart': m.fanart,
-        #          'poster': m.poster,
-        #          'info': {'video': {'title': 'TITLE', 'plot': plot}},
-        #          'icon': m.icon,
-        #          'is_folder': False,
-        #          'is_playable': True,
-        #          'url': self._plugin.get_url(action='links', id=m.id),
-        #          }
-
-        #         # yield {
-        #         #     'label': label,
-        #         #     'art': {
-        #         #         'thumb': m.thumb,
-        #         #         'poster': m.poster,
-        #         #         'fanart': m.fanart,
-        #         #         'icon': m.icon
-        #         #     },
-        #         #     'info': {
-        #         #         'video': {
-        #         #             # 'imdbnumber': ,
-        #         #             # 'count': ,
-        #         #             # 'cast': ,
-        #         #             # 'dateadded': ,
-        #         #             # 'director': ,
-        #         #             # 'genre': ,
-        #         #             # 'country': ,
-        #         #             # 'year': ,
-        #         #             # 'rating': ,
-        #         #             'plot': plot,
-        #         #             # 'plotoutline': ,
-        #         #             # 'title': ,
-        #         #             # 'sorttitle': ,
-        #         #             # 'duration': ,
-        #         #             # 'originaltitle': ,
-        #         #             # 'premiered': ,
-        #         #             # 'votes': ,
-        #         #             # 'trailer': ,
-        #         #             # 'mediatype': ,
-        #         #             # 'tagline': ,
-        #         #             # 'mpaa': ,
-        #         #             # 'playcount': ,
-        #         #         }
-        #         #     },
-        #         #     'is_folder': False,
-        #         #     'is_playable': True,
-        #         #     'url': self._plugin.get_url(action='links', id=m.id),
-        #         #     # 'context_menu': ,
-        #         #     # 'online_db_ids':
-        #         # }
-
-        # except Exception as e:
-        #     print(e)
+        except Exception as e:
+            print(e)

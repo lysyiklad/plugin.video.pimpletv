@@ -2,11 +2,13 @@
 
 import os
 import xbmc
-
-
 import simpleplugin
 
+
 class PimpletvPlugin(simpleplugin.Plugin):
+
+    def __init__(self):
+        super(PimpletvPlugin, self).__init__()
 
     def media(self):
         return os.path.join(self.path, 'resources', 'media')
@@ -27,8 +29,8 @@ class PimpletvPlugin(simpleplugin.Plugin):
 
     def get_setting(self, param, t):
         setting = {
-            'is_thumb': False,
-            'is_fanart': False,
+            'is_thumb': True,
+            'is_fanart': True,
             'delta_scan': 0,
         }
         return setting[param]

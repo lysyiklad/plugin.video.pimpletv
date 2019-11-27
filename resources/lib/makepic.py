@@ -182,5 +182,5 @@ class CreatePictures(object):
                 # ifon.save(thumb.encode('utf-8'))
                 ifon.save(file)
 
-        artwork.append(artwork[1])
+        #artwork.append(artwork[1])
         return artwork
