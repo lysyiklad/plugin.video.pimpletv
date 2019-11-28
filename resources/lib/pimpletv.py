@@ -6,11 +6,11 @@ import bs4
 from dateutil.tz import tzlocal, tzoffset
 from dateutil.parser import *
 import urllib2
+import pickle
+from collections import OrderedDict
 
-from .database import Match, Link
+# from .database import Match, Link
 from .makepic import CreatePictures
-
-#ID_PLUGIN = 'plugin.video.pimpletv'
 
 SITE = 'https://www.pimpletv.ru'
 
@@ -29,7 +29,7 @@ MONTHS = {u"января": u"January",
 
 
 def GET_FILE(file):
-    with open(file, 'rt', errors='ignore', encoding="utf-8") as f:
+    with open(file, 'rt') as f:  # , encoding="utf-8" , errors='ignore'
         try:
             return f.read()
         except Exception as e:
@@ -44,7 +44,7 @@ def create_id_match(date_broadcast, match):
 def format_timedelta(dt, pref):
     h = int(dt.seconds / 3600)
     return u'{} {} {} {:02} мин.'.format(pref, u'%s дн.' % dt.days if dt.days else u'',
-                                       u'%s ч.' % h if h else u'', int(dt.seconds % 3600 / 60))
+                                         u'%s ч.' % h if h else u'', int(dt.seconds % 3600 / 60))
 
 
 class PimpleTV(object):
@@ -52,7 +52,51 @@ class PimpleTV(object):
 
     def __init__(self, plugin):
         self._plugin = plugin
-        self._picmake = CreatePictures(self._plugin)   
+        self._picmake = CreatePictures(self._plugin)
+        self._date_scan = datetime.datetime.now()
+        self._matches = OrderedDict()
+
+        self.load()
+
+        """
+        self._matches = {
+            id : {
+                time: datetime,
+                id: int,
+                match: '',
+                league: '',
+                date_broadcast: datetime,
+                thumb: '',
+                icon: '',
+                poster: '',
+                fanart: '',
+                url_links: '',
+                href: [
+                        {
+                        'id': int,
+                        'title': '',
+                        'kbps': '',
+                        'resol': '',
+                        'href': '',
+                    }    
+                ]
+            }        
+        }
+        """
+
+    @property
+    def date_scan(self):
+        return self._date_scan
+
+    def load(self):
+        fp = os.path.join(self._plugin.userdata(), 'match.pickle')
+        if os.path.exists(fp):
+            with open(fp, 'rb') as f:
+                self._date_scan, self._matches = pickle.load(f)
+
+    def dump(self):
+        with open(os.path.join(self._plugin.userdata(), 'match.pickle'), 'wb') as f:
+            pickle.dump([self._date_scan, self._matches], f)
 
     def _http_get(self, url):
         try:
@@ -71,11 +115,13 @@ class PimpleTV(object):
     def update(self):
 
         # Проверка необходимости обновления БД
-        # if self.is_not_update():
-        #    return
+        if self.is_not_update():
+            for id in self._matches:
+                self.get_href_match(id)
+            return
 
-        time_scan = datetime.datetime.now()
-        # html = GET_FILE(os.path.join(self._plugin.path(), 'PimpleTVnew.htm'))
+        self._date_scan = datetime.datetime.now()
+       # html = GET_FILE(os.path.join(self._plugin.path, 'PimpleTV.htm'))
         html = self._http_get(SITE)
 
         #self._plugin.log(html)
@@ -84,7 +130,7 @@ class PimpleTV(object):
 
         streams_day_soup = soup.findAll('div', {'class': 'streams-day'})
 
-        ids = []
+        id_real = []
 
         for day_soup in streams_day_soup:
             day = '%s %s %s %s' % (
@@ -116,7 +162,7 @@ class PimpleTV(object):
                             # Определяем хэш матча
                             id = create_id_match(str(date_local), match)
 
-                            ids.append(id)
+                            id_real.append(id)
 
                             league = col.find('div', 'broadcast-category').text
 
@@ -127,77 +173,108 @@ class PimpleTV(object):
                                 # away_logo=os.path.join(self._plugin.media(), 'away.png'),
                                 id=id, date_broadcast=date_local, match=match, league=league)
 
-                            matchdb = Match.getMatch(id)
-                            if matchdb is None:
-                                Match.addMatch(time=time_scan,
-                                                   id=id,
-                                                   match=match,
-                                                   league=league,
-                                                   date_broadcast=date_local,
-                                                   thumb=thumb,
-                                                   icon=poster,
-                                                   poster=poster,
-                                                   fanart=fanart,
-                                                   url_links=SITE + col.find('div', 'live-teams').a['href'])
-                            else:
-                                matchdb.time = time_scan
-                                matchdb.thumb = thumb
-                                matchdb.icon = poster
-                                matchdb.poster = poster
-                                matchdb.fanart = fanart
+                            if id is not self._matches:
+                                self._matches[id] = {}
 
-                        #  self.get_href_match(id)
+                            m = self._matches[id]
+                            m['id'] = id
+                            m['match'] = match
+                            m['league'] = league
+                            m['date_broadcast'] = date_local
+                            m['thumb'] = thumb
+                            m['icon'] = ''
+                            m['poster'] = poster
+                            m['fanart'] = fanart
+                            m['url_links'] = SITE + col.find('div', 'live-teams').a['href']
+                            if 'href' is not m:
+                                m['href'] = []
+
+                            self.get_href_match(id)
 
                     else:
                         break
                 except Exception as e:
                     print('PimpleTV.update() - error - %s' % e)
 
-        # matchs_db = Match.select()
-        # # Определяем список файлов картинок, которые должны быть
-        # active_artwork = []
-        # for id in ids:
-        #     active_artwork.append('poster_%s.png' % id)
-        #     if self._plugin.get_setting('is_thumb', True):
-        #         active_artwork.append('thumb_%s.png' % id)
-        #     if self._plugin.get_setting('is_fanart', True):
-        #         active_artwork.append('fanart_%s.png' % id)
+        # 1. Удалить из self._matches не действительные матчи
+        # 2. Удалить из thumb не действительные картинки и их кеши
+        #
+        artwork_real = []
+        id_bad = []
+        for id, m in self._matches.items():
+            # print(id)
+            if id in id_real:
+                if m['thumb']:
+                    artwork_real.append(m['thumb'])
+                if m['icon']:
+                    artwork_real.append(m['icon'])
+                if m['poster']:
+                    artwork_real.append(m['poster'])
+                if m['fanart']:
+                    artwork_real.append(m['fanart'])
+            else:
+                id_bad.append(id)
+                self.remove_thumb(m['thumb'])
+                self.remove_thumb(m['icon'])
+                self.remove_thumb(m['poster'])
+                self.remove_thumb(m['fanart'])
+                self.remove_cache_thumb(m['thumb'])
+                self.remove_cache_thumb(m['icon'])
+                self.remove_cache_thumb(m['poster'])
+                self.remove_cache_thumb(m['fanart'])
 
-        # # Удаляем старье
-        # for match_db in matchs_db:
-        #     if match_db.id not in ids:
-        #         # определяем кеши картинок и удаляем кеши картинок из системы
-        #         if self._plugin.get_cache_thumb_name:
-        #             thumb_cache = self._plugin.get_cache_thumb_name(match_db.thumb)
-        #             self._plugin.log(thumb_cache)
-        #             if os.path.exists(thumb_cache):
-        #                 os.remove(thumb_cache)
-        #         # удаляем картинки из системы
-        #         os.remove(match_db.poster)
-        #         # удаляем матч из базы
-        #         Match.deleteMatch(match_db.id)
+        for id in id_bad:
+            del self._matches[id]
 
-        # files = os.listdir(self._plugin.userdata())
+        dir_thumb = os.path.join(self._plugin.userdata(), 'thumb')
+        files = os.listdir(dir_thumb)
 
-        # exception_file = ['match.db']
+        # подчищаем хвосты
+        for file in files:
+            f = os.path.join(dir_thumb, file)
+            if f not in artwork_real:  # and file not in exception_file:
+                os.remove(f)
+                self.remove_cache_thumb(f)
 
-        # for file in files:
-        #     if file not in active_artwork and file not in exception_file:
-        #         f = os.path.join(self._plugin.userdata(), file)
-        #         os.remove(f)
-        #         if self._plugin.get_cache_thumb_name:
-        #             thumb_cache = self._plugin.get_cache_thumb_name(f)
-        #             self._plugin.log(thumb_cache)
-        #             if os.path.exists(thumb_cache):
-        #                 os.remove(thumb_cache)
+        self.dump()
+
+    def remove_thumb(self, thumb):
+        if os.path.exists(thumb):
+            os.remove(thumb)
+
+    def remove_cache_thumb(self, thumb):
+        # определяем кеши картинок и удаляем кеши картинок из системы
+        if self._plugin.get_cache_thumb_name:
+            thumb_cache = self._plugin.get_cache_thumb_name(thumb)
+            self._plugin.log(thumb_cache)
+            if os.path.exists(thumb_cache):
+                os.remove(thumb_cache)
+
+    # def _get_minute_delta_now(self, id):
+    #     return (self._matches[id]['date_broadcast'] - datetime.datetime.now().replace(tzinfo=tzlocal())).total_seconds() / 60
 
     def get_href_match(self, id):
-        links = Link.getHrefMatch(id)
-        if links is not None:
+
+        links = []
+
+        self._plugin.log(type(id))
+
+        for mm in self._matches:
+            self._plugin.log(mm)
+        try:
+
+            links = self._matches[id]['href']
+        except Exception as e:
+            self._plugin.log(e)
+
+
+        # dt = (self._matches[id]['date_broadcast'] - datetime.datetime.now().replace(
+        #     tzinfo=tzlocal())).total_seconds() / 60
+        if links: # or dt < 0 or dt > 60:
             return links
 
-        # html = GET_FILE(os.path.join(self._plugin.path(), 'Link1.html'))
-        html = self._http_get(Match.getUrlHref(id))
+        #html = GET_FILE(os.path.join(self._plugin.path(), 'Link1.html'))
+        html = self._http_get(self._matches[id]['url_links'])
 
         soup = bs4.BeautifulSoup(html, 'html.parser')
 
@@ -207,8 +284,6 @@ class PimpleTV(object):
             return None
 
         tbody = broadcast_table.find('tbody')
-
-        links = []
 
         for tr in tbody.find_all('tr'):
             td = tr.find_all('td')
@@ -220,61 +295,59 @@ class PimpleTV(object):
                 'href': td[5].find('a')['href'],
             })
 
-        Link.addLink(id, links)
-
         return links
 
     def is_not_update(self):
         try:
+            fp = os.path.join(self._plugin.userdata(), 'match.pickle')
+            if not os.path.exists(fp):
+                return False
+            if not self._matches:
+                return False
             # Время сканирования меньше текущего времени на self._plugin.get_setting('delta_scan', True) - мин.
-            if ((datetime.datetime.now() - Match.dateScan()).seconds / 60) > self._plugin.get_setting('delta_scan',
-                                                                                                          True):
+            dt = (datetime.datetime.now() - self._date_scan).total_seconds() / 60
+            if dt > self._plugin.get_setting('delta_scan', True):
                 return False
             #
             #
             #
             #
-        except Exception:
+        except Exception as e:
+            self._plugin.log(e)
             return False
         return True
 
     def matches(self):
 
-       # self.update()
+        self.update()
         now_date = datetime.datetime.now().replace(tzinfo=tzlocal())
-        
-        matches = Match.getMatches()
 
         try:
-            for m in matches:
-                date_broadcast = parse(m.date_broadcast)
+            for m in self._matches.values():
+                # date_broadcast = parse(m.date_broadcast)
+                status = 'FFFFFFFF'
+                date_broadcast = m['date_broadcast']
                 if date_broadcast > now_date:
                     dt = date_broadcast - now_date
                     plot = format_timedelta(dt, u'Через')
+                    status = 'FFFFFFFF'
                 else:
                     dt = now_date - date_broadcast
                     if int(dt.total_seconds() / 60) < 110:
                         plot = u'Прямой эфир %s мин.' % int(dt.total_seconds() / 60)
+                        status = 'FFFF0000'
                     else:
                         plot = format_timedelta(dt, u'Закончен')
-
-                if dt.seconds < -6600:
-                    status = 'FF999999'
-                elif dt.seconds > 0:
-                    status = 'FFFFFFFF'
-                else:
-                    status = 'FFFF0000'
+                        status = 'FF999999'
 
                 title = u'[COLOR %s]%s[/COLOR]\n[B]%s[/B]\n[UPPERCASE]%s[/UPPERCASE]' % (
-                    status, date_broadcast.strftime('%d.%m %H:%M'), m.match, m.league)
+                    status, date_broadcast.strftime('%d.%m %H:%M'), m['match'], m['league'])
 
-                label = u'[COLOR %s]%s[/COLOR] - [B]%s[/B]' % (status, date_broadcast.strftime('%H:%M'), m.match)
+                
+                label = u'[COLOR %s]%s[/COLOR] - [B]%s[/B]' % (
+                    status, date_broadcast.strftime('%H:%M'), m['match'])
                 plot = title + '\n\n' + plot
-
-                # self._plugin.log(m.thumb)
-                # self._plugin.log(m.poster)
-                # self._plugin.log(m.fanart)
-
+                
                 # yield {'label': m.match,
                 #         'thumb': m.thumb,
                 #         'fanart': m.fanart,
@@ -287,12 +360,12 @@ class PimpleTV(object):
                 #         }
 
                 yield {
-                    'label': label,
-                    'art': {
-                        'thumb': m.thumb,
-                        'poster': m.poster,
-                        'fanart': m.fanart,
-                        'icon': m.thumb
+                    'label': label,                    
+                    'art': {       
+                        'thumb': m['thumb'],
+                        'poster': m['poster'],
+                        'fanart': m['fanart'],
+                        'icon': m['thumb']
                     },
                     'info': {
                         'video': {
@@ -320,9 +393,9 @@ class PimpleTV(object):
                             # 'playcount': ,
                         }
                     },
-                    'is_folder': False,
-                    'is_playable': True,
-                    'url': self._plugin.get_url(action='links', id=m.id),
+                    'is_folder': True,
+                    'is_playable': False,
+                    'url': self._plugin.get_url(action='links', id=m['id']),
                     # 'context_menu': ,
                     # 'online_db_ids':
                 }

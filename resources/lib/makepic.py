@@ -110,7 +110,7 @@ class CreatePictures(object):
     def __init__(self, plugin):
         self._plugin = plugin
         self.font_large_bolt = ImageFont.truetype(os.path.join(self._plugin.font(), 'BanderaPro.otf'), 50)
-        self.font_small = ImageFont.truetype(os.path.join(self._plugin.font(), 'UbuntuCondensed-Regular.ttf'), 30)
+        self.font_small = ImageFont.truetype(os.path.join(self._plugin.font(), 'UbuntuCondensed-Regular.ttf'), 40)
         self.target_folder = os.path.join(self._plugin.userdata(), 'thumb')
         if not os.path.exists(self.target_folder):
             os.makedirs(self.target_folder)
@@ -129,17 +129,17 @@ class CreatePictures(object):
         com_home = _cuttext(kwargs['match'].split(u'\u2014')[0].strip(), self.font_large_bolt)
         com_away = _cuttext(kwargs['match'].split(u'\u2014')[1].strip(), self.font_large_bolt)
 
-        ic1 = _open_url_image(kwargs['home_logo'])
-        ic2 = _open_url_image(kwargs['away_logo'])
+        ic1 = None
+        ic2 = None
 
         artwork = []
 
         for art in ARTWORK_DATA:
             if art['type'] == 'thumb' and not self._plugin.get_setting('is_thumb', True):
-                artwork.append(artwork[0])
+                artwork.append('')
                 continue
             if art['type'] == 'fanart' and not self._plugin.get_setting('is_fanart', True):
-                artwork.append(self._plugin.fanart)
+                artwork.append('')
                 continue
 
             file = os.path.join(self.target_folder, '%s_%s.png' %
@@ -160,24 +160,28 @@ class CreatePictures(object):
                 _draw_text(draw, time_, self.font_large_bolt, ifon.size[0], art['time_'])
 
                 # Сетевой рисунок
-                # ic1 = _open_url_image(kwargs['home_logo'], art['size_thumbhome'])
-                # ic2 = _open_url_image(kwargs['away_logo'], art['size_thumbaway'])
-
-                ic1 = ic1.resize(art['size_thumbhome'], Image.ANTIALIAS)
-                ic2 = ic2.resize(art['size_thumbaway'], Image.ANTIALIAS)
+                if ic1 is None:
+                  ic1 = _open_url_image(kwargs['home_logo'])
+                if ic2 is None:
+                  ic2 = _open_url_image(kwargs['away_logo'])
 
                 # # Локальный рисунок
-                # ic1 = Image.open(kwargs['home_logo'])
-                # # ic1.thumbnail(art['size_thumbhome'], Image.ANTIALIAS)
-                # ic1 = ic1.resize(art['size_thumbhome'], Image.ANTIALIAS)
-                # ic1 = ic1.convert("RGBA")
-                # ic2 = Image.open(kwargs['away_logo'])
-                # ic2 = ic2.resize(art['size_thumbaway'], Image.ANTIALIAS)
-                # # ic2.thumbnail(art['size_thumbaway'], Image.ANTIALIAS)
-                # ic2 = ic2.convert("RGBA")
+                # if ic1 is None:
+                #     ic1 = Image.open(kwargs['home_logo'])
+                #     # ic1.thumbnail(art['size_thumbhome'], Image.ANTIALIAS)
+                #     ic1 = ic1.convert("RGBA")
+                # if ic2 is None:
+                #     ic2 = Image.open(kwargs['away_logo'])
+                #     # ic2.thumbnail(art['size_thumbaway'], Image.ANTIALIAS)
+                #     ic2 = ic2.convert("RGBA")
 
-                ifon.paste(ic1, art['pos_thumbhome'], ic1)
-                ifon.paste(ic2, art['pos_thumbaway'], ic2)
+                if ic1 is not None:
+                    ic1 = ic1.resize(art['size_thumbhome'], Image.ANTIALIAS)
+                    ifon.paste(ic1, art['pos_thumbhome'], ic1)
+
+                if ic2 is not None:
+                    ic2 = ic2.resize(art['size_thumbaway'], Image.ANTIALIAS)
+                    ifon.paste(ic2, art['pos_thumbaway'], ic2)
 
                 # ifon.save(thumb.encode('utf-8'))
                 ifon.save(file)

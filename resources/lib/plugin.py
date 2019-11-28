@@ -31,6 +31,6 @@ class PimpletvPlugin(simpleplugin.Plugin):
         setting = {
             'is_thumb': True,
             'is_fanart': True,
-            'delta_scan': 0,
+            'delta_scan': 10
         }
         return setting[param]

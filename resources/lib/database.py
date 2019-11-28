@@ -4,18 +4,21 @@
 
 import os
 import datetime
-import xbmcaddon
-import xbmc
+# import xbmcaddon
+# import xbmc
 
 
 from .peewee import *
 
-__addon__ = xbmcaddon.Addon()
-__profile_dir__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))
-#__profile_dir__ = '/home/kvm/.kodi/userdata/addon_data/plugin.video.pimpletv'
+# __addon__ = xbmcaddon.Addon()
+# __profile_dir__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))
+__profile_dir__ = 'C:\\Users\\SmagarVI\\PycharmProjects\\pimpletv\\userdata\\plugin.video.pimpletv'
+#__profile_dir__ = os.path.dirname(__file__)
 
 db = SqliteDatabase(os.path.join(__profile_dir__, 'match.db'), pragmas={'foreign_keys': 1})
-#db = SqliteDatabase('/home/kvm/.kodi/userdata/addon_data/plugin.video.pimpletv/match.db', pragmas={'foreign_keys': 1})
+
+
+# db = SqliteDatabase('/home/kvm/.kodi/userdata/addon_data/plugin.video.pimpletv/match.db', pragmas={'foreign_keys': 1})
 
 
 class Match(Model):
