@@ -12,7 +12,6 @@ from collections import OrderedDict
 # from .database import Match, Link
 from .makepic import CreatePictures
 
-SITE = 'https://www.pimpletv.ru'
 
 MONTHS = {u"января": u"January",
           u"февраля": u"February",
@@ -47,18 +46,7 @@ def format_timedelta(dt, pref):
                                          u'%s ч.' % h if h else u'', int(dt.seconds % 3600 / 60))
 
 
-class PimpleTV(object):
-    tzs = 3
-
-    def __init__(self, plugin):
-        self._plugin = plugin
-        self._picmake = CreatePictures(self._plugin)
-        self._date_scan = datetime.datetime.now()
-        self._matches = OrderedDict()
-
-        self.load()
-
-        """
+"""
         self._matches = {
             id : {
                 time: datetime,
@@ -84,18 +72,32 @@ class PimpleTV(object):
         }
         """
 
+
+class PimpleTV(object):
+
+    def __init__(self, plugin):
+        self._plugin = plugin
+        self._picmake = CreatePictures(self._plugin)
+        self._date_scan = datetime.datetime.now()
+        self._matches = OrderedDict()
+        self._site = self._plugin.get_setting('url_site')
+        self._tzs = self._plugin.get_setting('time_zone_site')
+        
+        self.load()
+    
+
     @property
     def date_scan(self):
         return self._date_scan
 
     def load(self):
-        fp = os.path.join(self._plugin.userdata(), 'match.pickle')
+        fp = os.path.join(self._plugin.dir('userdata'), 'match.pickle')
         if os.path.exists(fp):
             with open(fp, 'rb') as f:
                 self._date_scan, self._matches = pickle.load(f)
 
     def dump(self):
-        with open(os.path.join(self._plugin.userdata(), 'match.pickle'), 'wb') as f:
+        with open(os.path.join(self._plugin.dir('userdata'), 'match.pickle'), 'wb') as f:
             pickle.dump([self._date_scan, self._matches], f)
 
     def _http_get(self, url):
@@ -115,14 +117,14 @@ class PimpleTV(object):
     def update(self):
 
         # Проверка необходимости обновления БД
-        if self.is_not_update():
-            for id in self._matches:
-                self.get_href_match(id)
-            return
+        # if self.is_not_update():
+        #     for id in self._matches:
+        #         self.get_href_match(id)
+        #     return
 
         self._date_scan = datetime.datetime.now()
        # html = GET_FILE(os.path.join(self._plugin.path, 'PimpleTV.htm'))
-        html = self._http_get(SITE)
+        html = self._http_get(self._site)
 
         #self._plugin.log(html)
 
@@ -143,16 +145,10 @@ class PimpleTV(object):
                     if row['class'] == ['row']:
                         cols = row.findAll('div', {'class': 'broadcast preview'})
                         for col in cols:
-                            # dbg_log(col.find('div', 'broadcast-category').text)
-                            # dbg_log(SITE + col.find('div', 'home-logo').img['src'])
-                            # dbg_log(SITE + col.find('div', 'away-logo').img['src'])
-                            # dbg_log(col.find('div', 'live-teams').text)
-                            # dbg_log(SITE + col.find('div', 'live-teams').a['href'])
-                            # dbg_log(col.find('div', 'bottom-line').span.text)
-
+                           
                             str_time = col.find('div', 'bottom-line').span.text
                             dt = parse(day % str_time)
-                            tz = tzoffset(None, self.tzs * 3600)
+                            tz = tzoffset(None, self._tzs * 3600)
                             dt = dt.replace(tzinfo=tz)
                             date_local = dt.astimezone(tzlocal())
                             self._plugin.log(date_local)
@@ -167,8 +163,8 @@ class PimpleTV(object):
                             league = col.find('div', 'broadcast-category').text
 
                             poster, thumb, fanart = self._picmake.create(
-                                home_logo=SITE + col.find('div', 'home-logo').img['src'],
-                                away_logo=SITE + col.find('div', 'away-logo').img['src'],
+                                home_logo=self._site + col.find('div', 'home-logo').img['src'],
+                                away_logo=self._site + col.find('div', 'away-logo').img['src'],
                                 # home_logo=os.path.join(self._plugin.media(), 'home.png'),
                                 # away_logo=os.path.join(self._plugin.media(), 'away.png'),
                                 id=id, date_broadcast=date_local, match=match, league=league)
@@ -185,7 +181,7 @@ class PimpleTV(object):
                             m['icon'] = ''
                             m['poster'] = poster
                             m['fanart'] = fanart
-                            m['url_links'] = SITE + col.find('div', 'live-teams').a['href']
+                            m['url_links'] = self._site + col.find('div', 'live-teams').a['href']
                             if 'href' is not m:
                                 m['href'] = []
 
@@ -218,15 +214,13 @@ class PimpleTV(object):
                 self.remove_thumb(m['icon'])
                 self.remove_thumb(m['poster'])
                 self.remove_thumb(m['fanart'])
-                self.remove_cache_thumb(m['thumb'])
-                self.remove_cache_thumb(m['icon'])
-                self.remove_cache_thumb(m['poster'])
-                self.remove_cache_thumb(m['fanart'])
+                
 
         for id in id_bad:
             del self._matches[id]
 
-        dir_thumb = os.path.join(self._plugin.userdata(), 'thumb')
+        #dir_thumb = os.path.join(self._plugin.userdata(), 'thumb')
+        dir_thumb = self._plugin.dir('thumb')
         files = os.listdir(dir_thumb)
 
         # подчищаем хвосты
@@ -241,6 +235,7 @@ class PimpleTV(object):
     def remove_thumb(self, thumb):
         if os.path.exists(thumb):
             os.remove(thumb)
+        self.remove_cache_thumb(thumb)
 
     def remove_cache_thumb(self, thumb):
         # определяем кеши картинок и удаляем кеши картинок из системы
@@ -299,14 +294,14 @@ class PimpleTV(object):
 
     def is_not_update(self):
         try:
-            fp = os.path.join(self._plugin.userdata(), 'match.pickle')
+            fp = os.path.join(self._plugin.dir('userdata'), 'match.pickle')
             if not os.path.exists(fp):
                 return False
             if not self._matches:
                 return False
             # Время сканирования меньше текущего времени на self._plugin.get_setting('delta_scan', True) - мин.
             dt = (datetime.datetime.now() - self._date_scan).total_seconds() / 60
-            if dt > self._plugin.get_setting('delta_scan', True):
+            if dt > self._plugin.get_setting('delta_scan'):
                 return False
             #
             #
@@ -358,7 +353,31 @@ class PimpleTV(object):
                 #         'is_playable': True,
                 #         'url': self._plugin.get_url(action='links', id=m.id),
                 #         }
-
+                
+                is_folder = True
+                is_playable = False
+                get_url = self._plugin.get_url(action='links', id=m['id'])
+                
+                # Сразу воспроизводить ссылку по-умолчанию
+                if self._plugin.get_setting('is_play'):
+                    is_folder = False
+                    is_playable = True
+                    href = ''
+                    # if self._plugin.get_setting('play_engine') == 'Ace Stream Engine':
+                        # # for h in m['href']:
+                            # # if h['title'] == 'Ace Stream':
+                                # # href=h['href']
+                                # # break
+                        # title = 'Ace Stream'
+                    # else:
+                        # title = 'SopCast'
+                        
+                    links = [x for x in m['href'] if x['title']==self._plugin.get_setting('play_engine')]
+                    if links: 
+                        href = links[0]['href']                            
+                    
+                    get_url = self._plugin.get_url(action='play', href=href)
+                
                 yield {
                     'label': label,                    
                     'art': {       
@@ -393,9 +412,9 @@ class PimpleTV(object):
                             # 'playcount': ,
                         }
                     },
-                    'is_folder': True,
-                    'is_playable': False,
-                    'url': self._plugin.get_url(action='links', id=m['id']),
+                    'is_folder': is_folder,
+                    'is_playable': is_playable,
+                    'url': get_url,
                     # 'context_menu': ,
                     # 'online_db_ids':
                 }
