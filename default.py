@@ -61,7 +61,7 @@ def links(params):
                  'icon': icon,
                  'fanart': '',
                  'art': {'icon': icon, 'thumb': icon, },
-                  'url': plugin.get_url(action='play', href=link['href']),
+                  'url': plugin.get_url(action='play', href=link['href'], id=id),
                   'is_playable': True }
 
 
@@ -110,7 +110,22 @@ def get_path_sopcast(href):
     
 @plugin.action()
 def play(params):
-    path = ''    
+    path = ''
+    plugin.log('params')
+    plugin.log(params)
+    if 'href' not in params or not params['href']:
+        links = pimpletv.get_href_match(int(params['id']))
+        plugin.log(links)
+        for h in links:
+            if h['title'] == plugin.get_setting('play_engine').decode('utf-8'):
+                params['href'] = h['href']
+                break
+        if 'href' not in params or not params['href']:
+            plugin.log(
+                '1. Нет ссылки для воспроизведения почему-то !')
+            params['href'] = ''
+
+
     href = params['href']
     url = urlparse(href)    
     if url.scheme == 'acestream':
@@ -121,7 +136,8 @@ def play(params):
         path = url.geturl()
     
     if not path:
-        plugin.log('Нет ссылки для воспроизведения почему-то !!!!!!!!!!!!!!!!!!!!!!!!!!')
+        plugin.log('2. Нет ссылки для воспроизведения почему-то !')
+        return
     
     plugin.log('PATH PLAY: %s' % path)
     

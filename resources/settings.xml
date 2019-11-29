@@ -9,10 +9,10 @@
 		<setting id="is_fanart" type="bool" label="Создавать фанарты" default="false" visible="true"/>
         <setting id="delta_scan" type="number" label="Период обновления матчей" default="120" visible="true"/>        
 		<setting id="is_play" type="bool" label="Воспроизвести сразу без выбора ссылок" default="false"/>
-        <setting label="Ссылка по умолчанию для воспроизведения" type="enum" id="play_engine" values="Ace Stream|SopCast" default="Ace Stream" />
+        <setting label="Ссылка по умолчанию для воспроизведения" type="labelenum" id="play_engine" values="Ace Stream|SopCast" default="Ace Stream" />
         <setting id="is_debug" type="bool" label="Включить отладочный режим" default="true"/>
 	</category>
-	<category label="AceStream Sopcast"> 
+	<category label="AceStream"> 
 		<setting id="is_default_ace" type="bool" label="Использовать по-умолчанию способ воспроизведения AceStream" default="false"/>
 		<setting label="Движок по-умолчанию" visible="true" type="enum" id="default_ace" values="Ace Stream Engine #1|Ace Stream Engine #2|HTTPAceProxy|TAM" default="Ace Stream Engine #1" />
 		<setting type="sep"/>

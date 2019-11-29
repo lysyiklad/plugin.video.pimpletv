@@ -117,10 +117,10 @@ class PimpleTV(object):
     def update(self):
 
         # Проверка необходимости обновления БД
-        # if self.is_not_update():
-        #     for id in self._matches:
-        #         self.get_href_match(id)
-        #     return
+        if self.is_not_update():
+            for id in self._matches:
+                self.get_href_match(id)
+            return
 
         self._date_scan = datetime.datetime.now()
        # html = GET_FILE(os.path.join(self._plugin.path, 'PimpleTV.htm'))
@@ -276,7 +276,7 @@ class PimpleTV(object):
         broadcast_table = soup.find('table', {'class': 'broadcast-table'})
 
         if broadcast_table is None:
-            return None
+            return []
 
         tbody = broadcast_table.find('tbody')
 
@@ -318,8 +318,7 @@ class PimpleTV(object):
         now_date = datetime.datetime.now().replace(tzinfo=tzlocal())
 
         try:
-            for m in self._matches.values():
-                # date_broadcast = parse(m.date_broadcast)
+            for m in self._matches.values():                
                 status = 'FFFFFFFF'
                 date_broadcast = m['date_broadcast']
                 if date_broadcast > now_date:
@@ -363,20 +362,14 @@ class PimpleTV(object):
                     is_folder = False
                     is_playable = True
                     href = ''
-                    # if self._plugin.get_setting('play_engine') == 'Ace Stream Engine':
-                        # # for h in m['href']:
-                            # # if h['title'] == 'Ace Stream':
-                                # # href=h['href']
-                                # # break
-                        # title = 'Ace Stream'
-                    # else:
-                        # title = 'SopCast'
-                        
-                    links = [x for x in m['href'] if x['title']==self._plugin.get_setting('play_engine')]
-                    if links: 
-                        href = links[0]['href']                            
+
+                    for h in m['href']:
+                        if h['title'] == self._plugin.get_setting('play_engine').decode('utf-8'):
+                            href=h['href']
+                            break                    
                     
-                    get_url = self._plugin.get_url(action='play', href=href)
+                    get_url = self._plugin.get_url(
+                        action='play', href=href, id=m['id'])
                 
                 yield {
                     'label': label,                    

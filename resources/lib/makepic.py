@@ -107,7 +107,7 @@ def _open_url_image(url):
 SIZE_FONT_LARGE1 = 50
 SIZE_FONT_LARGE2 = 65
 SIZE_FONT_SMALL1 = 35
-SIZE_FONT_SMALL2 = 45
+SIZE_FONT_SMALL2 = 40
 
 class CreatePictures(object):
 
