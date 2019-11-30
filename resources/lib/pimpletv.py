@@ -83,8 +83,7 @@ class PimpleTV(object):
         self._date_scan = datetime.datetime.now()
         self._matches = OrderedDict()
         self._site = self._plugin.get_setting('url_site')
-        self._tzs = self._plugin.get_setting('time_zone_site')
-        
+                
         self.load()
     
 
@@ -102,31 +101,18 @@ class PimpleTV(object):
         with open(os.path.join(self._plugin.dir('userdata'), 'match.pickle'), 'wb') as f:
             pickle.dump([self._date_scan, self._matches], f)
 
-    def _http_get(self, url):
-        try:
-            req = urllib2.Request(url=url)
-            req.add_header('User-Agent',
-                           'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; Mozilla/4.0'
-                           ' (compatible; MSIE 6.0; Windows NT 5.1; SV1) ; .NET CLR 1.1.4322; .NET CLR 2.0.50727; '
-                           '.NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)')
-            resp = urllib2.urlopen(req)
-            http = resp.read()
-            resp.close()
-            return http
-        except Exception as e:
-            self._plugin.logd('_http_get', 'GET EXCEPT [{}]'.format(e))
-
+    
     def update(self):
 
-        # # Проверка необходимости обновления БД
-        # if not self.is_update():
-        #     # for id in self._matches:
-        #     #     self.get_href_match(id)
-        #     return
+        # Проверка необходимости обновления БД
+        if not self.is_update():
+            # for id in self._matches:
+            #     self.get_href_match(id)
+            return
 
         self._date_scan = datetime.datetime.now()
        # html = GET_FILE(os.path.join(self._plugin.path, 'PimpleTV.htm'))
-        html = self._http_get(self._site)
+        html = self._plugin.http_get(self._site)
 
         #self._plugin.log(html)
 
@@ -151,11 +137,11 @@ class PimpleTV(object):
                            
                             str_time = col.find('div', 'bottom-line').span.text
                             dt = parse(day % str_time)
-                            tz = tzoffset(None, self._tzs * 3600)
+                            # int(self._plugin.get_setting('time_zone_site'))
+                            tz = tzoffset(None, 3 * 3600)
                             dt = dt.replace(tzinfo=tz)
                             date_local = dt.astimezone(tzlocal())
-                            #self._plugin.log(date_local)
-
+                            #date_local = dt.replace(tzinfo=tzlocal())                            
                             match = col.find('div', 'live-teams').text
 
                             # Определяем хэш матча
@@ -193,7 +179,7 @@ class PimpleTV(object):
                     else:
                         break
                 except Exception as e:
-                    print('PimpleTV.update() - error - %s' % e)
+                    self._plugin.logd('update', e)
 
         # 1. Удалить из self._matches не действительные матчи
         # 2. Удалить из thumb не действительные картинки и их кеши
@@ -262,6 +248,9 @@ class PimpleTV(object):
         self._plugin.logd('_get_minute_delta_now', dt)
         return dt
 
+    def get_match(self, id):
+        return self._matches[id]
+
     def get_href_match(self, id):
 
         links = []
@@ -276,11 +265,11 @@ class PimpleTV(object):
         #     tzinfo=tzlocal())).total_seconds() / 60
         dt = self._get_minute_delta_now(id)
 
-        if links or dt < 0 or dt > 60:
+        if links or dt < -140 or dt > 60:
             return links
 
         #html = GET_FILE(os.path.join(self._plugin.path(), 'Link1.html'))
-        html = self._http_get(self._matches[id]['url_links'])
+        html = self._plugin.http_get(self._matches[id]['url_links'])
 
         soup = bs4.BeautifulSoup(html, 'html.parser')
 
@@ -305,6 +294,9 @@ class PimpleTV(object):
 
     def is_update(self):
         try:
+            if self._plugin.settings_changed:
+                self._plugin.settings_changed = False
+                return True
             fp = os.path.join(self._plugin.dir('userdata'), 'match.pickle')
             if not os.path.exists(fp):
                 return True
@@ -405,7 +397,7 @@ class PimpleTV(object):
                             # 'rating': ,
                             'plot': plot,
                             # 'plotoutline': ,
-                            'title': m['match'],
+                            'title': label,
                             # 'sorttitle': ,
                             # 'duration': ,
                             # 'originaltitle': ,

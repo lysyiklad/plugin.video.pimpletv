@@ -6,7 +6,6 @@ import xbmcgui
 import xbmcplugin
 #import xbmcaddon
 
-from resources.lib.pimpletv import PimpleTV
 from resources.lib.plugin import PimpletvPlugin
 
 # ID_PLUGIN = 'plugin.video.pimpletv'
@@ -15,12 +14,10 @@ from resources.lib.plugin import PimpletvPlugin
 
 plugin = PimpletvPlugin()
 
-pimpletv = PimpleTV(plugin)
-
 
 @plugin.action()
 def root():    
-    return plugin.create_listing(pimpletv.matches(), 
+    return plugin.create_listing(plugin.matches(), 
                                 content='movies', 
                                 sort_methods=(xbmcplugin.SORT_METHOD_DATEADDED, xbmcplugin.SORT_METHOD_VIDEO_RATING), 
                                 cache_to_disk=True)
@@ -29,8 +26,8 @@ def root():
 
 @plugin.action()
 def links(params):
-    id = params['id']
-    links = pimpletv.get_href_match(int(id))
+    id = int(params['id'])
+    links = plugin.get_href_match(id)
     plugin.logd('links', links)
 
     if not links:                
@@ -40,6 +37,8 @@ def links(params):
                         'url': plugin.get_url(action='play', href='https://www.ixbt.com/multimedia/video-methodology/camcorders-and-others/htc-one-x-avc-baseline@l3.2-1280x720-variable-fps-aac-2ch.mp4'),
                         'is_playable': True}
         return
+
+    match = plugin.get_match(id)
 
     for link in links:
         
@@ -56,7 +55,7 @@ def links(params):
             icon = os.path.join(plugin.dir('media'), 'http.png')
 
         yield {'label': '%s - %s - %s' % (link['title'], link['kbps'], link['resol']),
-                 'info': {'video': {'title': '', 'plot': plot}},
+               'info': {'video': {'title': match['match'], 'plot': plot}},
                  'thumb': icon,
                  'icon': icon,
                  'fanart': '',
@@ -87,7 +86,7 @@ def get_path_acestream(href):
           
              
         if item == -1:
-            return ''
+            return None
 
     cid = url.netloc
 
@@ -114,7 +113,7 @@ def get_path_sopcast(href):
     
 def notification_nolinks(msg):
     title = plugin.name.encode('utf-8')
-    time = 5000 
+    time = 500 
     icon = plugin.icon.encode('utf-8')
     xbmc.executebuiltin('Notification(%s, %s, %d, %s)' % (title, msg, time, icon))
 
@@ -124,7 +123,7 @@ def play(params):
     path = ''    
     plugin.logd('play', params)
     if 'href' not in params or not params['href']:
-        links = pimpletv.get_href_match(int(params['id']))
+        links = plugin.get_href_match(int(params['id']))
         plugin.logd('play', links)
         for h in links:
             if h['title'] == plugin.get_setting('play_engine').decode('utf-8'):
