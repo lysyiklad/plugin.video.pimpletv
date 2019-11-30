@@ -564,11 +564,12 @@ class Addon(object):
             Default: ``xbmc.LOGDEBUG``
         :type level: int
         """
+        
         if isinstance(message, unicode):
             message = message.encode('utf-8')
         xbmc.log('{0} [v.{1}]: {2}'.format(self.id, self.version, message), level)
 
-    def log_notice(self, message):
+    def log_notice(self, message, f):
         """
         Add NOTICE message to the Kodi log
 
@@ -610,7 +611,14 @@ class Addon(object):
         :param message: message to write to the Kodi log
         :type message: str
         """
-        self.log(message, xbmc.LOGDEBUG)
+        self.log(message, xbmc.LOGDEBUG)        
+        
+
+    def logd(self, func, message):
+        if isinstance(message, unicode):
+            message = message.encode('utf-8')
+        xbmc.log('{0} [v.{1}]: <{2}> - {3}'.format(self.id,
+                                                 self.version, func, message),  xbmc.LOGDEBUG)
 
     def get_storage(self, filename='storage.pcl'):
         """

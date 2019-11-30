@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 import os
 from urlparse import urlparse
-#import xbmc
+import xbmc
 import xbmcgui
 import xbmcplugin
 #import xbmcaddon
@@ -31,9 +31,9 @@ def root():
 def links(params):
     id = params['id']
     links = pimpletv.get_href_match(int(id))
-    plugin.log(links)
+    plugin.logd('links', links)
 
-    if links is None:        
+    if not links:                
         yield {'label': 'Ссылок на трансляции нет, возможно появятся позже!',
                         'info': {'video': {'title': 'https://www.pimpletv.ru', 'plot': 'https://www.pimpletv.ru'}},
                         'art': {'icon': plugin.icon, 'thumb': plugin.icon, },
@@ -79,7 +79,12 @@ def get_path_acestream(href):
              'HTTPAceProxy [%s]' % plugin.get_setting('ipproxy'), 
              'Add-on TAM [127.0.0.1]']        
              
-        item = dialog.select('Выбор способа воспроизведения Ace Straem', list=list)             
+        
+        if plugin.version_kodi < 17:
+            item = dialog.select('Выбор способа воспроизведения Ace Straem', list=list)
+        else:
+            item = dialog.contextmenu(list)
+          
              
         if item == -1:
             return ''
@@ -107,23 +112,29 @@ def get_path_sopcast(href):
     path = "plugin://program.plexus/?mode=2&url=" + url.geturl() + "&name=Sopcast"    
     return path
     
-    
+def notification_nolinks(msg):
+    title = plugin.name.encode('utf-8')
+    time = 5000 
+    icon = plugin.icon.encode('utf-8')
+    xbmc.executebuiltin('Notification(%s, %s, %d, %s)' % (title, msg, time, icon))
+
+
 @plugin.action()
 def play(params):
-    path = ''
-    plugin.log('params')
-    plugin.log(params)
+    path = ''    
+    plugin.logd('play', params)
     if 'href' not in params or not params['href']:
         links = pimpletv.get_href_match(int(params['id']))
-        plugin.log(links)
+        plugin.logd('play', links)
         for h in links:
             if h['title'] == plugin.get_setting('play_engine').decode('utf-8'):
                 params['href'] = h['href']
                 break
         if 'href' not in params or not params['href']:
-            plugin.log(
-                '1. Нет ссылки для воспроизведения почему-то !')
-            params['href'] = ''
+            msg = 'НЕТ ССЫЛОК НА ТРАНСЛЯЦИЮ МАТЧА!'
+            plugin.logd('play', msg)
+            notification_nolinks(msg)
+            return None
 
 
     href = params['href']
@@ -136,10 +147,12 @@ def play(params):
         path = url.geturl()
     
     if not path:
-        plugin.log('2. Нет ссылки для воспроизведения почему-то !')
-        return
+        msg = 'ПУСТОЙ ПУТЬ НА ТРАНСЛЯЦИЮ МАТЧА!'
+        notification_nolinks(msg)
+        plugin.logd('play', msg)
+        return None
     
-    plugin.log('PATH PLAY: %s' % path)
+    plugin.logd('play', 'PATH PLAY: %s' % path)
     
     return PimpletvPlugin.resolve_url(path, succeeded=True)                  
 

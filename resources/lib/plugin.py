@@ -32,6 +32,7 @@ class PimpletvPlugin(simpleplugin.Plugin):
     # def userdata(self):
     #     return xbmc.translatePath(self.addon.getAddonInfo('profile'))
         
+    @property
     def version_kodi(self):
         return int(xbmc.getInfoLabel('System.BuildVersion')[:2])
 

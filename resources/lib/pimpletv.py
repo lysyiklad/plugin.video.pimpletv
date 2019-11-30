@@ -12,6 +12,8 @@ from collections import OrderedDict
 # from .database import Match, Link
 from .makepic import CreatePictures
 
+import inspect
+
 
 MONTHS = {u"января": u"January",
           u"февраля": u"February",
@@ -112,15 +114,15 @@ class PimpleTV(object):
             resp.close()
             return http
         except Exception as e:
-            self._plugin.log('GET EXCEPT [%s]' % e)
+            self._plugin.logd('_http_get', 'GET EXCEPT [{}]'.format(e))
 
     def update(self):
 
-        # Проверка необходимости обновления БД
-        if self.is_not_update():
-            for id in self._matches:
-                self.get_href_match(id)
-            return
+        # # Проверка необходимости обновления БД
+        # if not self.is_update():
+        #     # for id in self._matches:
+        #     #     self.get_href_match(id)
+        #     return
 
         self._date_scan = datetime.datetime.now()
        # html = GET_FILE(os.path.join(self._plugin.path, 'PimpleTV.htm'))
@@ -137,7 +139,8 @@ class PimpleTV(object):
         for day_soup in streams_day_soup:
             day = '%s %s %s %s' % (
                 day_soup.text.split()[0], MONTHS[day_soup.text.split()[1]], datetime.datetime.now().year, '%s')
-            self._plugin.log(day)
+            
+            self._plugin.logd('update', day)
 
             for row in list(day_soup.next_siblings):
                 try:
@@ -151,7 +154,7 @@ class PimpleTV(object):
                             tz = tzoffset(None, self._tzs * 3600)
                             dt = dt.replace(tzinfo=tz)
                             date_local = dt.astimezone(tzlocal())
-                            self._plugin.log(date_local)
+                            #self._plugin.log(date_local)
 
                             match = col.find('div', 'live-teams').text
 
@@ -230,6 +233,9 @@ class PimpleTV(object):
                 os.remove(f)
                 self.remove_cache_thumb(f)
 
+        self._matches = OrderedDict(
+            sorted(self._matches.items(), key=lambda t: t[1]['date_broadcast']))
+
         self.dump()
 
     def remove_thumb(self, thumb):
@@ -241,31 +247,36 @@ class PimpleTV(object):
         # определяем кеши картинок и удаляем кеши картинок из системы
         if self._plugin.get_cache_thumb_name:
             thumb_cache = self._plugin.get_cache_thumb_name(thumb)
-            self._plugin.log(thumb_cache)
+            self._plugin.logd('remove_cache_thumb', thumb_cache)
             if os.path.exists(thumb_cache):
                 os.remove(thumb_cache)
 
-    # def _get_minute_delta_now(self, id):
-    #     return (self._matches[id]['date_broadcast'] - datetime.datetime.now().replace(tzinfo=tzlocal())).total_seconds() / 60
+    def _get_minute_delta_now(self, id):
+        """
+        Время в минутах до матча. Если матча с таким id нет, возвращаем None
+        """
+        if id not in self._matches:
+            return None
+
+        dt = long((self._matches[id]['date_broadcast'] - datetime.datetime.now().replace(tzinfo=tzlocal())).total_seconds() / 60)
+        self._plugin.logd('_get_minute_delta_now', dt)
+        return dt
 
     def get_href_match(self, id):
 
         links = []
 
-        self._plugin.log(type(id))
-
-        for mm in self._matches:
-            self._plugin.log(mm)
         try:
-
             links = self._matches[id]['href']
         except Exception as e:
-            self._plugin.log(e)
+            self._plugin.logd('get_href_match', e)
 
 
         # dt = (self._matches[id]['date_broadcast'] - datetime.datetime.now().replace(
         #     tzinfo=tzlocal())).total_seconds() / 60
-        if links: # or dt < 0 or dt > 60:
+        dt = self._get_minute_delta_now(id)
+
+        if links or dt < 0 or dt > 60:
             return links
 
         #html = GET_FILE(os.path.join(self._plugin.path(), 'Link1.html'))
@@ -292,30 +303,32 @@ class PimpleTV(object):
 
         return links
 
-    def is_not_update(self):
+    def is_update(self):
         try:
             fp = os.path.join(self._plugin.dir('userdata'), 'match.pickle')
             if not os.path.exists(fp):
-                return False
+                return True
             if not self._matches:
-                return False
+                return True
             # Время сканирования меньше текущего времени на self._plugin.get_setting('delta_scan', True) - мин.
-            dt = (datetime.datetime.now() - self._date_scan).total_seconds() / 60
+            dt = long((datetime.datetime.now() - self._date_scan).total_seconds() / 60)
+            
             if dt > self._plugin.get_setting('delta_scan'):
-                return False
-            #
+                return True            #
             #
             #
             #
         except Exception as e:
-            self._plugin.log(e)
-            return False
-        return True
+            self._plugin.logd('is_update', e)
+            return True
+        return False
 
     def matches(self):
 
         self.update()
         now_date = datetime.datetime.now().replace(tzinfo=tzlocal())
+
+        self._plugin.logd('matches', now_date)
 
         try:
             for m in self._matches.values():                
@@ -392,7 +405,7 @@ class PimpleTV(object):
                             # 'rating': ,
                             'plot': plot,
                             # 'plotoutline': ,
-                            # 'title': ,
+                            'title': m['match'],
                             # 'sorttitle': ,
                             # 'duration': ,
                             # 'originaltitle': ,
