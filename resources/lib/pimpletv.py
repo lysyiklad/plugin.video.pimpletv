@@ -102,7 +102,7 @@ class PimpleTV(object):
             pickle.dump([self._date_scan, self._matches], f)
 
     
-    def update(self):        
+    def update(self):
 
         # Проверка необходимости обновления БД
         if not self.is_update():
@@ -221,8 +221,7 @@ class PimpleTV(object):
         for file in files:
             f = os.path.join(dir_thumb, file)
             if f not in artwork_real:  # and file not in exception_file:
-                os.remove(f)
-                self.remove_cache_thumb(f)
+                self.remove_thumb(f)
 
         self._matches = OrderedDict(
             sorted(self._matches.items(), key=lambda t: t[1]['date_broadcast']))
@@ -233,6 +232,7 @@ class PimpleTV(object):
 
     def remove_thumb(self, thumb):
         if os.path.exists(thumb):
+            self._plugin.logd('remove_thumb', thumb)
             os.remove(thumb)
         self.remove_cache_thumb(thumb)
 

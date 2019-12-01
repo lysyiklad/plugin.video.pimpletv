@@ -10,7 +10,8 @@
         <setting id="delta_scan" type="number" label="Период обновления матчей" default="120" visible="true"/>        
 		<setting id="is_play" type="bool" label="Воспроизвести сразу без выбора ссылок" default="false"/>
         <setting label="Ссылка по умолчанию для воспроизведения" type="labelenum" id="play_engine" values="Ace Stream|SopCast" default="Ace Stream" visible="eq(-1,true)" />
-        <setting id="is_debug" type="bool" label="Включить отладочный режим" default="true"/>
+        <setting id="is_debug" type="bool" label="Включить отладочный режим" default="true" visible="false"/>
+		<setting id="full_reset" type="bool" label="Полное обновление" default="false"/>
 	</category>
 	<category label="AceStream"> 
 		<setting id="is_default_ace" type="bool" label="Использовать по-умолчанию способ воспроизведения AceStream" default="false"/>

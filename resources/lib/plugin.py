@@ -58,19 +58,22 @@ class PimpletvPlugin(simpleplugin.Plugin):
         return '\n'.join(response_info)           
 
     def update(self):
-        self.logd('plugin.update - self.settings_changed',
-                  self.settings_changed)
+        self.logd('plugin.update - self.settings_changed', self.settings_changed)
+        
+        # for i in range(15):
+        #     if not self.stop_update:
+        #         break
+        #     self.logd(
+        #         'plugin.update.while - self.stop_update', self.stop_update)
+        #     xbmc.sleep(1)
 
-        while self.stop_update:
-            self.logd('plugin.update - self.stop_update', self.stop_update)
-            xbmc.sleep(10)
-
-        self.stop_update = True
-        self.logd('plugin.update - self.stop_update', self.stop_update)
+        # self.stop_update = True
+        # self.logd('plugin.update - self.stop_update', self.stop_update)
 
         self._pimpletv.update()
 
-        self.stop_update = False
+        # self.stop_update = False
+        # self.logd('plugin.update - self.stop_update', self.stop_update)
         
 
     def matches(self):
@@ -81,6 +84,20 @@ class PimpletvPlugin(simpleplugin.Plugin):
 
     def get_match(self, id):
         return self._pimpletv.get_match(id)
+
+    def remove_thumb(self, file):
+        self._pimpletv.remove_thumb(file)
+
+    def remove_all_thumb(self):
+        pics = os.listdir(self.dir('thumb'))
+        for pic in pics:
+            pic = os.path.join(self.dir('thumb'), pic)            
+            self.remove_thumb(pic)
+        match_pickle = os.path.join(
+            self.dir('userdata'), 'match.pickle')
+        if os.path.exists(match_pickle):
+            os.remove(match_pickle)
+            self._plugin.logd('remove match.pickle', match_pickle)
 
     @property
     def version_kodi(self):
