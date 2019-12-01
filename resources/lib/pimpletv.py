@@ -5,6 +5,7 @@ import datetime
 import bs4
 from dateutil.tz import tzlocal, tzoffset
 from dateutil.parser import *
+import time
 import urllib2
 import pickle
 from collections import OrderedDict
@@ -104,6 +105,14 @@ class PimpleTV(object):
     
     def update(self):
 
+        while self._plugin.stop_update:
+            self._plugin.logd('self._plugin.stop_update',
+                              self._plugin.stop_update)
+            time.sleep(10)
+
+        self._plugin.stop_update = True
+        self._plugin.logd('self._plugin.stop_update', self._plugin.stop_update)
+
         # Проверка необходимости обновления БД
         if not self.is_update():
             # for id in self._matches:
@@ -160,6 +169,9 @@ class PimpleTV(object):
 
                             if id is not self._matches:
                                 self._matches[id] = {}
+
+                            self._plugin.logd(
+                                'update', 'ADD MATCH - %s - %s' % (date_local, match))
 
                             m = self._matches[id]
                             m['id'] = id
@@ -223,6 +235,7 @@ class PimpleTV(object):
             sorted(self._matches.items(), key=lambda t: t[1]['date_broadcast']))
 
         self.dump()
+        self._plugin.stop_update = False
 
     def remove_thumb(self, thumb):
         if os.path.exists(thumb):
@@ -245,7 +258,7 @@ class PimpleTV(object):
             return None
 
         dt = long((self._matches[id]['date_broadcast'] - datetime.datetime.now().replace(tzinfo=tzlocal())).total_seconds() / 60)
-        self._plugin.logd('_get_minute_delta_now', dt)
+        #self._plugin.logd('_get_minute_delta_now', dt)
         return dt
 
     def get_match(self, id):
@@ -301,15 +314,11 @@ class PimpleTV(object):
             if not os.path.exists(fp):
                 return True
             if not self._matches:
-                return True
+                return True            
+            dt = long((datetime.datetime.now() - self._date_scan).total_seconds() / 60)            
             # Время сканирования меньше текущего времени на self._plugin.get_setting('delta_scan', True) - мин.
-            dt = long((datetime.datetime.now() - self._date_scan).total_seconds() / 60)
-            
             if dt > self._plugin.get_setting('delta_scan'):
                 return True            #
-            #
-            #
-            #
         except Exception as e:
             self._plugin.logd('is_update', e)
             return True
@@ -345,7 +354,7 @@ class PimpleTV(object):
                 
                 label = u'[COLOR %s]%s[/COLOR] - [B]%s[/B]' % (
                     status, date_broadcast.strftime('%H:%M'), m['match'])
-                plot = title + '\n\n' + plot
+                plot = title + '\n' + plot
                 
                 # yield {'label': m.match,
                 #         'thumb': m.thumb,
@@ -393,7 +402,7 @@ class PimpleTV(object):
                             # 'director': ,
                             # 'genre': ,
                             # 'country': ,
-                            # 'year': ,
+                            'year': '2019',
                             # 'rating': ,
                             'plot': plot,
                             # 'plotoutline': ,

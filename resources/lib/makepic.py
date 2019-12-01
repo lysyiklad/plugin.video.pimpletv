@@ -128,8 +128,11 @@ class CreatePictures(object):
 
     def create(self, **kwargs):
     
-        # if not self._plugin.get_setting('is_thumb') and not self._plugin.get_setting('is_fanart') and not self._plugin.get_setting('is_poster'):
-        #     return ['', '', '']
+        if not self._plugin.get_setting('is_thumb') and not self._plugin.get_setting('is_fanart') and not self._plugin.get_setting('is_poster'):
+            return ['', '', '']
+
+        self._plugin.logd('create picture', 'thumb - {} fanart - {} poster - {}'.format(
+            self._plugin.get_setting('is_thumb'), self._plugin.get_setting('is_fanart'), self._plugin.get_setting('is_poster')))
 
         league = _cuttext(kwargs['league'], self.font_small1)
         vs = 'vs'
@@ -153,6 +156,9 @@ class CreatePictures(object):
                 artwork.append('')
                 continue
             if art['type'] == 'fanart' and not self._plugin.get_setting('is_fanart'):
+                artwork.append('')
+                continue
+            if art['type'] == 'poster' and not self._plugin.get_setting('is_poster'):
                 artwork.append('')
                 continue
 

@@ -23,6 +23,7 @@ class PimpletvPlugin(simpleplugin.Plugin):
 
         self._pimpletv = PimpleTV(self)
         self.settings_changed = False
+        self.stop_update = False
     
     def dir(self, dir):
         return self._dir[dir]
@@ -34,26 +35,10 @@ class PimpletvPlugin(simpleplugin.Plugin):
                            'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; Mozilla/4.0'
                            ' (compatible; MSIE 6.0; Windows NT 5.1; SV1) ; .NET CLR 1.1.4322; .NET CLR 2.0.50727; '
                            '.NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)')
+            
             response = urllib2.urlopen(req)
-
-            # URL из запроса
-            self.log("The URL is: %s" % response.geturl())
-            # Ответ сервера
-            code = response.code
-            self.log("This gets the code: %s" % response.code)
-            if code != 200:
-                raise Exception('Ошибка (%s) в %s ' % (code, url))
-            # Заголовки ответа в виде словаря
-            self.log("The Headers are: %s" % response.info())
-            # Достаем дату сервера из заголовков ответа
-            self.log("The Date is: %s" % response.info()['date'])
-            # Получаем заголовок 'server' из заголовков
-            self.log("The Server is: %s" % response.info()['server'])
-            # Получаем весь html страницы
+            self.log(self._get_response_info(response))            
             html = response.read()
-            #self.log("Get all data: %s" % html)
-            # Узнаем длину страницу
-            self.log("Get the length :%s" % len(html))
             response.close()
             return html
         except Exception as e:
@@ -62,6 +47,15 @@ class PimpletvPlugin(simpleplugin.Plugin):
             err = '*** HTTP ERROR: %s - url: %s ' % (str(e), url)
             self.log(err)
 
+    @staticmethod
+    def _get_response_info(response):
+        response_info = ['Response info', 'Status code: {0}'.format(response.code)]        
+        if response.code != 200:
+            raise Exception('Error (%s) в %s ' %
+                            (response.code, response.geturl()))
+        response_info.append('URL: {0}'.format(response.geturl()))
+        response_info.append('Info: {0}'.format(response.info()))
+        return '\n'.join(response_info)           
 
     def update(self):
         return self._pimpletv.update()

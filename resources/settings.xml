@@ -5,7 +5,7 @@
 		<setting id="selected_leagues" type="text" label="selected_leagues" default="0" visible="false" />		
 		<setting label="Часовой пояс сайта" type="labelenum" id="time_zone_site" values="-12|-11|-10|-9|-8|-7|-6|-5|-4|-3|-2|-1|0|1|2|3|4|5|6|7|8|9|10|11|12" default="3" />        
         <setting id="is_poster" type="bool" label="Создавать постеры" default="false" visible="true"/>
-		<setting id="is_thumb" type="bool" label="Создавать thumb" default="false" visible="true"/>
+		<setting id="is_thumb" type="bool" label="Создавать миниатюры" default="false" visible="true"/>
 		<setting id="is_fanart" type="bool" label="Создавать фанарты" default="false" visible="true"/>
         <setting id="delta_scan" type="number" label="Период обновления матчей" default="120" visible="true"/>        
 		<setting id="is_play" type="bool" label="Воспроизвести сразу без выбора ссылок" default="false"/>
