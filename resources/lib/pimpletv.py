@@ -5,7 +5,6 @@ import datetime
 import bs4
 from dateutil.tz import tzlocal, tzoffset
 from dateutil.parser import *
-import time
 import urllib2
 import pickle
 from collections import OrderedDict
@@ -103,21 +102,15 @@ class PimpleTV(object):
             pickle.dump([self._date_scan, self._matches], f)
 
     
-    def update(self):
-
-        while self._plugin.stop_update:
-            self._plugin.logd('self._plugin.stop_update',
-                              self._plugin.stop_update)
-            time.sleep(10)
-
-        self._plugin.stop_update = True
-        self._plugin.logd('self._plugin.stop_update', self._plugin.stop_update)
+    def update(self):        
 
         # Проверка необходимости обновления БД
         if not self.is_update():
             # for id in self._matches:
             #     self.get_href_match(id)
             return
+
+        self._plugin.log('START UPDATE')
 
         self._date_scan = datetime.datetime.now()
        # html = GET_FILE(os.path.join(self._plugin.path, 'PimpleTV.htm'))
@@ -235,7 +228,8 @@ class PimpleTV(object):
             sorted(self._matches.items(), key=lambda t: t[1]['date_broadcast']))
 
         self.dump()
-        self._plugin.stop_update = False
+        self._plugin.log('STOP UPDATE')
+        
 
     def remove_thumb(self, thumb):
         if os.path.exists(thumb):
@@ -329,7 +323,7 @@ class PimpleTV(object):
         self.update()
         now_date = datetime.datetime.now().replace(tzinfo=tzlocal())
 
-        self._plugin.logd('matches', now_date)
+        self._plugin.logd('pimpletv.matches()', '%s' % now_date)
 
         try:
             for m in self._matches.values():                
@@ -402,7 +396,7 @@ class PimpleTV(object):
                             # 'director': ,
                             # 'genre': ,
                             # 'country': ,
-                            'year': '2019',
+                            #'year': '2019',
                             # 'rating': ,
                             'plot': plot,
                             # 'plotoutline': ,
@@ -427,4 +421,4 @@ class PimpleTV(object):
                 }
 
         except Exception as e:
-            print(e)
+            self._plugin.logd('pimpletv.matches() ERROR', '%s' % e)

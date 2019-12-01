@@ -58,7 +58,20 @@ class PimpletvPlugin(simpleplugin.Plugin):
         return '\n'.join(response_info)           
 
     def update(self):
-        return self._pimpletv.update()
+        self.logd('plugin.update - self.settings_changed',
+                  self.settings_changed)
+
+        while self.stop_update:
+            self.logd('plugin.update - self.stop_update', self.stop_update)
+            xbmc.sleep(10)
+
+        self.stop_update = True
+        self.logd('plugin.update - self.stop_update', self.stop_update)
+
+        self._pimpletv.update()
+
+        self.stop_update = False
+        
 
     def matches(self):
         return self._pimpletv.matches()

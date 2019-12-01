@@ -15,6 +15,7 @@ class Monitor(xbmc.Monitor):
     def onSettingsChanged(self):        
         default.plugin.settings_changed = True
         default.plugin.update()
+        default.plugin.settings_changed = False
         xbmc.executebuiltin('Container.Refresh()')
 
 
