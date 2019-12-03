@@ -235,18 +235,7 @@ class PimpleTV(Plugin):
 
                 label = u'[COLOR %s]%s[/COLOR] - [B]%s[/B]' % (
                     status, date_broadcast.strftime('%H:%M'), item['match'])
-                plot = title + '\n' + plot
-
-                # yield {'label': m.match,
-                #         'thumb': m.thumb,
-                #         'fanart': m.fanart,
-                #         'art': {'poster': m.poster},
-                #         'info': {'video': {'title':title, 'plot': plot}},
-                #         'icon': m.icon,
-                #         'is_folder': False,
-                #         'is_playable': True,
-                #         'url': self._plugin.get_url(action='links', id=m.id),
-                #         }
+                plot = title + '\n' + plot                
 
                 is_folder = True
                 is_playable = False

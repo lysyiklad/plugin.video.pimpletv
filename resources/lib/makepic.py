@@ -21,7 +21,7 @@ ARTWORK_DATA = [
      'com_home': 300,
      'vs': 370,
      'com_away': 420,
-     'weekday': 550,
+     'weekday': 500,
      'month': 575,
      'time_': 645,
      'size_thumbhome': (150, 150),

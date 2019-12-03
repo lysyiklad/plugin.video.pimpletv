@@ -199,7 +199,7 @@ class Plugin(simpleplugin.Plugin):
         """
         try:
             if self.settings_changed:
-                self.settings_changed = False
+                #self.settings_changed = False
                 return True
             if not os.path.exists(self._listing_pickle):
                 return True
@@ -364,7 +364,7 @@ class Plugin(simpleplugin.Plugin):
             self.remove_thumb(pic)
         if os.path.exists(self._listing_pickle):
             os.remove(self._listing_pickle)
-            self._plugin.logd('remove listing.pickle', self._listing_pickle)
+            self.logd('remove listing.pickle', self._listing_pickle)
 
     @property
     def version_kodi(self):
@@ -453,16 +453,28 @@ class Plugin(simpleplugin.Plugin):
         dt = dt.replace(tzinfo=tz)
         return dt.astimezone(tzlocal())
 
-    def full_reset(self):
-        """
-        Полный сброс списков
-        :return:
-        """
-        self.settings_changed = True
-        if self.get_setting('full_reset'):
-            self.set_setting('full_reset', False)
-            self.log('START FULL RESET')
-            self.remove_all_thumb()
+    def on_settings_changed(self):        
+        dialog = xbmcgui.Dialog()
+        self.settings_changed = True        
+        dialog.notification(
+                'Изменение настроек PimpleTV', 'Подождите пожалуйста!', xbmcgui.NOTIFICATION_INFO, 10000)
+        self.update()        
+        self.settings_changed = False   
+        xbmc.executebuiltin('Dialog.Close(all,true)')
+        
 
+    def reset(self):
+        """
+        Сброс списков
+        :return:
+        """        
+        xbmc.executebuiltin('Dialog.Close(all,true)')
+        dialog = xbmcgui.Dialog()
+        dialog.notification(
+            'PimpleTV', 'Обновление данных плагина', self.icon, 20000)
+        self.log('START RESET')
+        self.remove_all_thumb()
         self.update()
-        self.settings_changed = False
+        self.log('END RESET')
+        xbmc.executebuiltin('Dialog.Close(all,true)')
+        xbmc.executebuiltin('Container.Refresh()')

@@ -20,5 +20,10 @@ def play(params):
     return plugin.play(params)
 
 
+@plugin.action()
+def reset():
+    return plugin.reset()
+
+
 if __name__ == '__main__':
     plugin.run()

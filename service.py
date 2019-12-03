@@ -2,6 +2,7 @@
 
 import os
 import xbmc
+import xbmcgui
 # import xbmcaddon
 
 
@@ -15,13 +16,14 @@ class Monitor(xbmc.Monitor):
         xbmc.Monitor.__init__(self)
 
     def onSettingsChanged(self):
-        default.plugin.full_reset()
+        super(Monitor, self).onSettingsChanged()
+        default.plugin.on_settings_changed()
         xbmc.executebuiltin('Container.Refresh()')
 
 
 if __name__ == "__main__":
     monitor = Monitor()
-    while not monitor.abortRequested():
+    while not monitor.abortRequested():        
         default.plugin.log('START SERVICE!')
         default.plugin.update()
         default.plugin.log('STOP SERVICE!')
