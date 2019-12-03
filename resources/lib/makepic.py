@@ -20,8 +20,8 @@ ARTWORK_DATA = [
      'league': 25,
      'com_home': 300,
      'vs': 370,
-     'com_away': 420,
-     'weekday': 500,
+     'com_away': 410,
+     'weekday': 520,
      'month': 575,
      'time_': 645,
      'size_thumbhome': (150, 150),
@@ -34,9 +34,9 @@ ARTWORK_DATA = [
      'com_home': 220,
      'vs': None,
      'com_away': 280,
-     'weekday': 350,
+     'weekday': 345,
      'month': 380,
-     'time_': 410,
+     'time_': 420,
      'size_thumbhome': (150, 150),
      'size_thumbaway': (150, 150),
      'pos_thumbhome': (50, 60),
@@ -94,7 +94,8 @@ def _draw_text(draw, text, font, width_bkg, padding_top):
     if padding_top is None:
         return
     text = _cuttext(text, font)
-    draw.text((_get_indent_left_for_center(text, width_bkg, font), padding_top), text, (0, 0, 0), font=font)
+    draw.text((_get_indent_left_for_center(text, width_bkg, font),
+               padding_top), text, (0, 0, 0), font=font)
 
 
 def _open_url_image(url):
@@ -106,7 +107,7 @@ def _open_url_image(url):
 
 
 SIZE_FONT_LARGE1 = 50
-SIZE_FONT_LARGE2 = 65
+SIZE_FONT_LARGE2 = 55
 SIZE_FONT_SMALL1 = 35
 SIZE_FONT_SMALL2 = 40
 
@@ -117,38 +118,41 @@ class CreatePictures(object):
         self._plugin = plugin
         self.font_large1 = ImageFont.truetype(os.path.join(
             self._plugin.dir('font'), 'OpenSans-Regular.ttf'), SIZE_FONT_LARGE1)
+
         self.font_large2 = ImageFont.truetype(os.path.join(
             self._plugin.dir('font'), 'BanderaPro.otf'), SIZE_FONT_LARGE2)
+
         self.font_small1 = ImageFont.truetype(os.path.join(self._plugin.dir(
             'font'), 'UbuntuCondensed-Regular.ttf'), SIZE_FONT_SMALL1)
+
         self.font_small2 = ImageFont.truetype(os.path.join(
             self._plugin.dir('font'), 'ubuntu.ttf'), SIZE_FONT_SMALL2)
-        # self.target_folder = os.path.join(self._plugin.userdata(), 'thumb')
+
         self.target_folder = self._plugin.dir('thumb')
         if not os.path.exists(self.target_folder):
             os.makedirs(self.target_folder)
 
-    def create(self, **kwargs):
+    def create_football_poster(self, **kwargs):
 
         if not self._plugin.get_setting('is_thumb') and not self._plugin.get_setting(
                 'is_fanart') and not self._plugin.get_setting('is_poster'):
             return ['', '', '']
 
         self._plugin.logd('create picture', 'thumb - {} fanart - {} poster - {}'.format(
-            self._plugin.get_setting('is_thumb'), self._plugin.get_setting('is_fanart'),
+            self._plugin.get_setting(
+                'is_thumb'), self._plugin.get_setting('is_fanart'),
             self._plugin.get_setting('is_poster')))
 
-        league = _cuttext(kwargs['league'], self.font_small1)
+        league = kwargs['league']
         vs = 'vs'
         weekday = WEEKDAY[kwargs['date_broadcast'].weekday()]  # a
         month = u'%s %s %s' % (
             kwargs['date_broadcast'].day, MONTHS[kwargs['date_broadcast'].month - 1],
             kwargs['date_broadcast'].year)
-        # time_ = kwargs['date_broadcast'].strftime("%H:%M").decode('utf-8')
         time_ = kwargs['date_broadcast'].strftime("%H:%M")
 
-        com_home = _cuttext(kwargs['match'].split(u'\u2014')[0].strip(), self.font_large1)
-        com_away = _cuttext(kwargs['match'].split(u'\u2014')[1].strip(), self.font_large1)
+        com_home = kwargs['match'].split(u'\u2014')[0].strip()
+        com_away = kwargs['match'].split(u'\u2014')[1].strip()
 
         ic1 = None
         ic2 = None
@@ -176,13 +180,19 @@ class CreatePictures(object):
                 ifon = ifon.convert("RGBA")
                 draw = ImageDraw.Draw(ifon)
 
-                _draw_text(draw, league, self.font_small1, ifon.size[0], art['league'])
-                _draw_text(draw, com_home, self.font_large2, ifon.size[0], art['com_home'])
+                _draw_text(draw, league, self.font_small1,
+                           ifon.size[0], art['league'])
+                _draw_text(draw, com_home, self.font_large2,
+                           ifon.size[0], art['com_home'])
                 _draw_text(draw, vs, self.font_small1, ifon.size[0], art['vs'])
-                _draw_text(draw, com_away, self.font_large2, ifon.size[0], art['com_away'])
-                _draw_text(draw, weekday, self.font_small2, ifon.size[0], art['weekday'])
-                _draw_text(draw, month, self.font_small2, ifon.size[0], art['month'])
-                _draw_text(draw, time_, self.font_large2, ifon.size[0], art['time_'])
+                _draw_text(draw, com_away, self.font_large2,
+                           ifon.size[0], art['com_away'])
+                _draw_text(draw, weekday, self.font_small2,
+                           ifon.size[0], art['weekday'])
+                _draw_text(draw, month, self.font_small2,
+                           ifon.size[0], art['month'])
+                _draw_text(draw, time_, self.font_large2,
+                           ifon.size[0], art['time_'])
 
                 # Сетевой рисунок
                 if ic1 is None:
@@ -208,8 +218,6 @@ class CreatePictures(object):
                     ic2 = ic2.resize(art['size_thumbaway'], Image.ANTIALIAS)
                     ifon.paste(ic2, art['pos_thumbaway'], ic2)
 
-                # ifon.save(thumb.encode('utf-8'))
                 ifon.save(file)
 
-        # artwork.append(artwork[1])
         return artwork

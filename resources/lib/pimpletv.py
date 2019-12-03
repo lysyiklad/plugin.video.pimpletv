@@ -99,11 +99,11 @@ class PimpleTV(Plugin):
 
                             league = col.find('div', 'broadcast-category').text
 
-                            poster, thumb, fanart = self._picmake.create(
+                            poster, thumb, fanart = self._picmake.create_football_poster(
                                 home_logo=self._site +
-                                          col.find('div', 'home-logo').img['src'],
+                                col.find('div', 'home-logo').img['src'],
                                 away_logo=self._site +
-                                          col.find('div', 'away-logo').img['src'],
+                                col.find('div', 'away-logo').img['src'],
                                 # home_logo=os.path.join(self._plugin.media(), 'home.png'),
                                 # away_logo=os.path.join(self._plugin.media(), 'away.png'),
                                 id=id, date_broadcast=date_local, match=match, league=league)
@@ -125,7 +125,7 @@ class PimpleTV(Plugin):
                             item['poster'] = poster
                             item['fanart'] = fanart
                             item['url_links'] = self._site + \
-                                                col.find('div', 'live-teams').a['href']
+                                col.find('div', 'live-teams').a['href']
                             if 'href' is not item:
                                 item['href'] = []
 
@@ -235,7 +235,7 @@ class PimpleTV(Plugin):
 
                 label = u'[COLOR %s]%s[/COLOR] - [B]%s[/B]' % (
                     status, date_broadcast.strftime('%H:%M'), item['match'])
-                plot = title + '\n' + plot                
+                plot = title + '\n' + plot
 
                 is_folder = True
                 is_playable = False
