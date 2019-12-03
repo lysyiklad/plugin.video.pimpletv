@@ -19,10 +19,10 @@ ARTWORK_DATA = [
     {'type': 'poster',
      'league': 25,
      'com_home': 300,
-     'vs': 380,
+     'vs': 370,
      'com_away': 420,
      'weekday': 550,
-     'month': 585,
+     'month': 575,
      'time_': 645,
      'size_thumbhome': (150, 150),
      'size_thumbaway': (150, 150),
@@ -104,17 +104,19 @@ def _open_url_image(url):
     ic1 = Image.open(image_file)
     return ic1.convert("RGBA")
 
+
 SIZE_FONT_LARGE1 = 50
 SIZE_FONT_LARGE2 = 65
 SIZE_FONT_SMALL1 = 35
 SIZE_FONT_SMALL2 = 40
+
 
 class CreatePictures(object):
 
     def __init__(self, plugin):
         self._plugin = plugin
         self.font_large1 = ImageFont.truetype(os.path.join(
-            self._plugin.dir('font'), 'BanderaPro.otf'), SIZE_FONT_LARGE1)
+            self._plugin.dir('font'), 'OpenSans-Regular.ttf'), SIZE_FONT_LARGE1)
         self.font_large2 = ImageFont.truetype(os.path.join(
             self._plugin.dir('font'), 'BanderaPro.otf'), SIZE_FONT_LARGE2)
         self.font_small1 = ImageFont.truetype(os.path.join(self._plugin.dir(
@@ -127,12 +129,14 @@ class CreatePictures(object):
             os.makedirs(self.target_folder)
 
     def create(self, **kwargs):
-    
-        if not self._plugin.get_setting('is_thumb') and not self._plugin.get_setting('is_fanart') and not self._plugin.get_setting('is_poster'):
+
+        if not self._plugin.get_setting('is_thumb') and not self._plugin.get_setting(
+                'is_fanart') and not self._plugin.get_setting('is_poster'):
             return ['', '', '']
 
         self._plugin.logd('create picture', 'thumb - {} fanart - {} poster - {}'.format(
-            self._plugin.get_setting('is_thumb'), self._plugin.get_setting('is_fanart'), self._plugin.get_setting('is_poster')))
+            self._plugin.get_setting('is_thumb'), self._plugin.get_setting('is_fanart'),
+            self._plugin.get_setting('is_poster')))
 
         league = _cuttext(kwargs['league'], self.font_small1)
         vs = 'vs'
@@ -173,18 +177,18 @@ class CreatePictures(object):
                 draw = ImageDraw.Draw(ifon)
 
                 _draw_text(draw, league, self.font_small1, ifon.size[0], art['league'])
-                _draw_text(draw, com_home, self.font_large1, ifon.size[0], art['com_home'])
+                _draw_text(draw, com_home, self.font_large2, ifon.size[0], art['com_home'])
                 _draw_text(draw, vs, self.font_small1, ifon.size[0], art['vs'])
-                _draw_text(draw, com_away, self.font_large1, ifon.size[0], art['com_away'])
+                _draw_text(draw, com_away, self.font_large2, ifon.size[0], art['com_away'])
                 _draw_text(draw, weekday, self.font_small2, ifon.size[0], art['weekday'])
                 _draw_text(draw, month, self.font_small2, ifon.size[0], art['month'])
                 _draw_text(draw, time_, self.font_large2, ifon.size[0], art['time_'])
 
                 # Сетевой рисунок
                 if ic1 is None:
-                  ic1 = _open_url_image(kwargs['home_logo'])
+                    ic1 = _open_url_image(kwargs['home_logo'])
                 if ic2 is None:
-                  ic2 = _open_url_image(kwargs['away_logo'])
+                    ic2 = _open_url_image(kwargs['away_logo'])
 
                 # # Локальный рисунок
                 # if ic1 is None:
@@ -207,5 +211,5 @@ class CreatePictures(object):
                 # ifon.save(thumb.encode('utf-8'))
                 ifon.save(file)
 
-        #artwork.append(artwork[1])
+        # artwork.append(artwork[1])
         return artwork

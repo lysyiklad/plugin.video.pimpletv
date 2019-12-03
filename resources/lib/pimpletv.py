@@ -2,7 +2,7 @@
 
 import datetime
 import os
-#from collections import OrderedDict
+# from collections import OrderedDict
 from urlparse import urlparse
 
 import bs4
@@ -58,7 +58,7 @@ class PimpleTV(Plugin):
         super(PimpleTV, self).__init__()
         self._picmake = CreatePictures(self)
 
-    def parse_listing(self, html):
+    def _parse_listing(self, html):
         """
         Парсим страницу для основного списка
         :param html:
@@ -87,11 +87,9 @@ class PimpleTV(Plugin):
 
                             str_time = col.find('div', 'bottom-line').span.text
                             dt = parse(day % str_time)
-                            tz = tzoffset(
-                                None, int(self.get_setting('time_zone_site')) * 3600)
-                            dt = dt.replace(tzinfo=tz)
-                            date_local = dt.astimezone(tzlocal())
-                            # date_local = dt.replace(tzinfo=tzlocal())
+
+                            date_local = self.convert_local_datetime(dt)
+
                             match = col.find('div', 'live-teams').text
 
                             # Создаем хэш
@@ -138,7 +136,7 @@ class PimpleTV(Plugin):
 
         return listing
 
-    def parse_links(self, html):
+    def _parse_links(self, html):
         """
         Парсим страницу для списка ссылок
         :param html:
@@ -212,7 +210,7 @@ class PimpleTV(Plugin):
 
         now_date = datetime.datetime.now().replace(tzinfo=tzlocal())
 
-        self.logd('pimpletv.matches()', '%s' % now_date)
+        self.logd('pimpletv._get_listing()', '%s' % now_date)
 
         try:
             for item in self._listing.values():

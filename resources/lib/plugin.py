@@ -6,11 +6,12 @@ import pickle
 import urllib2
 from collections import OrderedDict
 from urlparse import urlparse
+from abc import abstractmethod
 
 from dateutil.parser import *
 from dateutil.tz import tzlocal, tzoffset
 
-import simpleplugin
+from . import simpleplugin
 import xbmc
 import xbmcgui
 import xbmcplugin
@@ -18,28 +19,26 @@ import xbmcplugin
 LISTING_PICKLE = 'listing.pickle'
 
 
-def GET_FILE(file):
-    with open(file, 'rt') as f:  # , encoding="utf-8" , errors='ignore'
-        try:
-            return f.read()
-        except Exception as e:
-            print(e)
-    return ''
+# def file_read(file):
+#     with open(file, 'rt') as f:  # , encoding="utf-8" , errors='ignore'
+#         try:
+#             return f.read()
+#         except Exception as e:
+#             print(e)
+#     return ''
 
 
 class Plugin(simpleplugin.Plugin):
 
     def __init__(self):
         super(Plugin, self).__init__()
-        self._dir = {
-            'media': os.path.join(self.path, 'resources', 'media'),
-            'font': os.path.join(self.path, 'resources', 'data', 'font'),
-            'lib': os.path.join(self.path, 'resources', 'lib'),
-            'userdata': xbmc.translatePath(self.addon.getAddonInfo('profile')),
-        }
-        self._dir['thumb'] = os.path.join(self._dir['userdata'], 'thumb')
+        self._dir = {'media': os.path.join(self.path, 'resources', 'media'),
+                     'font': os.path.join(self.path, 'resources', 'data', 'font'),
+                     'lib': os.path.join(self.path, 'resources', 'lib'),
+                     'thumb': os.path.join(self.config_dir, 'thumb')}
 
         self._site = self.get_setting('url_site')
+        self._listing_pickle = os.path.join(self.config_dir, LISTING_PICKLE)
         self.settings_changed = False
         self.stop_update = False
 
@@ -47,6 +46,32 @@ class Plugin(simpleplugin.Plugin):
         self._listing = OrderedDict()
 
         self.load()
+
+    @abstractmethod
+    def _parse_listing(self, html):
+        """
+        Парсим страницу для основного списка
+        :param html: страница html
+        :return: словарь словарей с данными для формирования списка корневой виртуальной папки
+        """
+        pass
+
+    @abstractmethod
+    def _parse_links(self, html):
+        """
+        Парсим страницу со ссылками
+        :param html: страница html
+        :return: список словарей для формирования списка папки со ссылками
+        """
+        pass
+
+    @abstractmethod
+    def _get_listing(self):
+        pass
+
+    @abstractmethod
+    def _get_links(self, id):
+        pass
 
     def create_listing_(self):
         return self.create_listing(self.get_listing(),
@@ -62,34 +87,6 @@ class Plugin(simpleplugin.Plugin):
         """
         self.update()
         return self._get_listing()
-
-    def links(self, id):
-        """
-        Возвращает список ссылок кокретного элемента. При необходимости парсит по ссылке в элементе.
-        :param id: id элемента
-        :return:
-        """
-        self.logd('links', id)
-
-        links = self._listing[id]['href']
-
-        self.logd('links', links)
-
-        # dt = (self._matches[id]['date_broadcast'] - datetime.datetime.now().replace(
-        #     tzinfo=tzlocal())).total_seconds() / 60
-        dt = self._get_minute_delta_now(id)
-
-        if links or dt < -140 or dt > 60:
-            return links
-
-        # html = GET_FILE(os.path.join(self._plugin.path(), 'Link1.html'))
-        html = self.http_get(self._listing[id]['url_links'])
-
-        links.extend(self.parse_links(html))
-
-        self.logd('self._listing[id][href]', self._listing[id]['href'])
-
-        return links
 
     def get_links(self, params):
         """
@@ -111,6 +108,112 @@ class Plugin(simpleplugin.Plugin):
 
         return self._get_links(id)
 
+    def links(self, id):
+        """
+        Возвращает список ссылок кокретного элемента. При необходимости парсит по ссылке в элементе.
+        :param id: id элемента
+        :return:
+        """
+        links = self._listing[id]['href']
+
+        self.logd('links - id - %s' % id, links)
+
+        dt = self._get_minute_delta_now(id)
+
+        if links or dt < -140 or dt > 60:
+            return links
+
+        html = self.http_get(self._listing[id]['url_links'])
+
+        links.extend(self._parse_links(html))
+
+        self.logd('self._listing[id][href]', self._listing[id]['href'])
+
+        return links
+
+    def update(self):
+        """
+        Обновление списков для виртуальных папок, рисунков, удаление мусора, сохранение в pickle
+        :return:
+        """
+        self.logd('plugin.update - self.settings_changed', self.settings_changed)
+
+        # Проверка необходимости обновления БД
+        if not self.is_update():
+            return
+
+        self.log('START UPDATE')
+
+        self._date_scan = datetime.datetime.now()
+        # html = GET_FILE(os.path.join(self._plugin.path, 'PimpleTV.htm'))
+        html = self.http_get(self._site)
+
+        self._listing = self._parse_listing(html)
+
+        for id_ in self._listing:
+            self.links(id_)
+
+        # 1. Удалить из self._listing не действительные матчи
+        # 2. Удалить из thumb не действительные картинки и их кеши
+        #
+        artwork_real = []
+        for id_, item in self._listing.items():
+            if id_ in self._listing:
+                if item['thumb']:
+                    artwork_real.append(item['thumb'])
+                if item['icon']:
+                    artwork_real.append(item['icon'])
+                if item['poster']:
+                    artwork_real.append(item['poster'])
+                if item['fanart']:
+                    artwork_real.append(item['fanart'])
+            else:
+                self.remove_thumb(item['thumb'])
+                self.remove_thumb(item['icon'])
+                self.remove_thumb(item['poster'])
+                self.remove_thumb(item['fanart'])
+
+        dir_thumb = self.dir('thumb')
+        files = os.listdir(dir_thumb)
+
+        # подчищаем хвосты
+        for file in files:
+            f = os.path.join(dir_thumb, file)
+            if f not in artwork_real:
+                self.remove_thumb(f)
+
+        self._listing = OrderedDict(
+            sorted(self._listing.items(), key=lambda t: t[1]['date']))
+
+        self.dump()
+        # self.log(self._listing)
+        self.log('STOP UPDATE')
+
+        # self.stop_update = False
+        # self.logd('plugin.update - self.stop_update', self.stop_update)
+
+    def is_update(self):
+        """
+        Проверяет необходимость обновления списков
+        :return: True - обновляем, False - нет
+        """
+        try:
+            if self.settings_changed:
+                self.settings_changed = False
+                return True
+            if not os.path.exists(self._listing_pickle):
+                return True
+            if not self._listing:
+                return True
+            dt = int((datetime.datetime.now() - self._date_scan).total_seconds() / 60)
+            # Время сканирования меньше текущего времени на self.get_setting('delta_scan', True) - мин.
+            if dt > self.get_setting('delta_scan'):
+                return True  #
+        except Exception as e:
+            self.logd('is_update', e)
+            return True
+        return False
+
     def play(self, params):
         """
         Воспроизводит ссылку
@@ -131,7 +234,7 @@ class Plugin(simpleplugin.Plugin):
             if 'href' not in params or not params['href']:
                 msg = 'НЕТ ССЫЛОК НА ТРАНСЛЯЦИЮ МАТЧА!'
                 self.logd('play', msg)
-                self.notification_nolinks(msg)
+                self.notification(msg)
                 return None
 
         href = params['href']
@@ -145,7 +248,7 @@ class Plugin(simpleplugin.Plugin):
 
         if not path:
             msg = 'ПУСТОЙ ПУТЬ НА ТРАНСЛЯЦИЮ МАТЧА!'
-            self.notification_nolinks(msg)
+            self.notification(msg)
             self.logd('play', msg)
             return None
 
@@ -158,13 +261,12 @@ class Plugin(simpleplugin.Plugin):
         return self._date_scan
 
     def load(self):
-        fp = os.path.join(self.dir('userdata'), LISTING_PICKLE)
-        if os.path.exists(fp):
-            with open(fp, 'rb') as f:
+        if os.path.exists(self._listing_pickle):
+            with open(self._listing_pickle, 'rb') as f:
                 self._date_scan, self._listing = pickle.load(f)
 
     def dump(self):
-        with open(os.path.join(self.dir('userdata'), LISTING_PICKLE), 'wb') as f:
+        with open(self._listing_pickle, 'wb') as f:
             pickle.dump([self._date_scan, self._listing], f)
 
     @staticmethod
@@ -182,103 +284,6 @@ class Plugin(simpleplugin.Plugin):
         """
         return hash(key)
 
-    def is_update(self):
-        """
-        Проверяет необходимость обновления списков
-        :return: True - обновляем, False - нет
-        """
-        try:
-            if self.settings_changed:
-                self.settings_changed = False
-                return True
-            fp = os.path.join(self.dir('userdata'), LISTING_PICKLE)
-            if not os.path.exists(fp):
-                return True
-            if not self._listing:
-                return True
-            dt = long((datetime.datetime.now() - self._date_scan).total_seconds() / 60)
-            # Время сканирования меньше текущего времени на self.get_setting('delta_scan', True) - мин.
-            if dt > self.get_setting('delta_scan'):
-                return True  #
-        except Exception as e:
-            self.logd('is_update', e)
-            return True
-        return False
-
-    def update(self):
-        """
-        Обновление списков для виртуальных папок, рисунков, удаление мусора, сохранение в pickle
-        :return:
-        """
-        self.logd('plugin.update - self.settings_changed', self.settings_changed)
-
-        # for i in range(15):
-        #     if not self.stop_update:
-        #         break
-        #     self.logd(
-        #         'plugin.update.while - self.stop_update', self.stop_update)
-        #     xbmc.sleep(1)
-
-        # self.stop_update = True
-        # self.logd('plugin.update - self.stop_update', self.stop_update)
-
-        # Проверка необходимости обновления БД
-        if not self.is_update():
-            # for id in self._matches:
-            #     self.get_href_match(id)
-            return
-
-        self.log('START UPDATE')
-
-        self._date_scan = datetime.datetime.now()
-        # html = GET_FILE(os.path.join(self._plugin.path, 'PimpleTV.htm'))
-        html = self.http_get(self._site)
-
-        self._listing = self.parse_listing(html)
-
-        for id in self._listing:
-            self.links(id)
-
-        # 1. Удалить из self._matches не действительные матчи
-        # 2. Удалить из thumb не действительные картинки и их кеши
-        #
-        artwork_real = []
-        for id, item in self._listing.items():
-            if id in self._listing:
-                if item['thumb']:
-                    artwork_real.append(item['thumb'])
-                if item['icon']:
-                    artwork_real.append(item['icon'])
-                if item['poster']:
-                    artwork_real.append(item['poster'])
-                if item['fanart']:
-                    artwork_real.append(item['fanart'])
-            else:
-                self.remove_thumb(item['thumb'])
-                self.remove_thumb(item['icon'])
-                self.remove_thumb(item['poster'])
-                self.remove_thumb(item['fanart'])
-
-        # dir_thumb = os.path.join(self._plugin.userdata(), 'thumb')
-        dir_thumb = self.dir('thumb')
-        files = os.listdir(dir_thumb)
-
-        # подчищаем хвосты
-        for file in files:
-            f = os.path.join(dir_thumb, file)
-            if f not in artwork_real:  # and file not in exception_file:
-                self.remove_thumb(f)
-
-        self._listing = OrderedDict(
-            sorted(self._listing.items(), key=lambda t: t[1]['date']))
-
-        self.dump()
-        self.log(self._listing)
-        self.log('STOP UPDATE')
-
-        # self.stop_update = False
-        # self.logd('plugin.update - self.stop_update', self.stop_update)
-
     def _get_minute_delta_now(self, id):
         """
         Время в минутах до даты в элементе списка. Если матча с таким id нет, возвращаем None
@@ -286,8 +291,7 @@ class Plugin(simpleplugin.Plugin):
         if id not in self._listing:
             return None
 
-        dt = long((self._listing[id]['date'] - datetime.datetime.now().replace(tzinfo=tzlocal())).total_seconds() / 60)
-        # self._plugin.logd('_get_minute_delta_now', dt)
+        dt = int((self._listing[id]['date'] - datetime.datetime.now().replace(tzinfo=tzlocal())).total_seconds() / 60)
         return dt
 
     def dir(self, dir_):
@@ -358,17 +362,16 @@ class Plugin(simpleplugin.Plugin):
         for pic in pics:
             pic = os.path.join(self.dir('thumb'), pic)
             self.remove_thumb(pic)
-        match_pickle = os.path.join(
-            self.dir('userdata'), LISTING_PICKLE)
-        if os.path.exists(match_pickle):
-            os.remove(match_pickle)
-            self._plugin.logd('remove LISTING_PICKLE', match_pickle)
+        if os.path.exists(self._listing_pickle):
+            os.remove(self._listing_pickle)
+            self._plugin.logd('remove listing.pickle', self._listing_pickle)
 
     @property
     def version_kodi(self):
         return int(xbmc.getInfoLabel('System.BuildVersion')[:2])
 
-    def cache_thumb_name(self, thumb):
+    @staticmethod
+    def cache_thumb_name(thumb):
         """
         Находит кеш рисунка
         :param thumb:
@@ -378,7 +381,7 @@ class Plugin(simpleplugin.Plugin):
         thumb_cached = thumb_cached.replace('tbn', 'png')
         return os.path.join(os.path.join(xbmc.translatePath("special://thumbnails"), thumb_cached[0], thumb_cached))
 
-    def notification_nolinks(self, msg):
+    def notification(self, msg):
         """
         Выводит уведомление о пустой ссылке
         :param msg:
@@ -389,7 +392,8 @@ class Plugin(simpleplugin.Plugin):
         icon = self.icon.encode('utf-8')
         xbmc.executebuiltin('Notification(%s, %s, %d, %s)' % (title, msg, time, icon))
 
-    def get_path_sopcast(self, href):
+    @staticmethod
+    def get_path_sopcast(href):
         url = urlparse(href)
         path = "plugin://program.plexus/?mode=2&url=" + url.geturl() + "&name=Sopcast"
         return path
@@ -438,6 +442,16 @@ class Plugin(simpleplugin.Plugin):
             path = "plugin://plugin.video.tam/?mode=play&url=%s&engine=ace_proxy" % href
 
         return path
+
+    def convert_local_datetime(self, dt):
+        """
+        Переводит dt в локальное осведомленное (aware) время
+        :param dt: datetime относительное (naive) время
+        :return: datetime локальное осведомленное (aware) время
+        """
+        tz = tzoffset(None, int(self.get_setting('time_zone_site')) * 3600)
+        dt = dt.replace(tzinfo=tz)
+        return dt.astimezone(tzlocal())
 
     def full_reset(self):
         """
