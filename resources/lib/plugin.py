@@ -153,33 +153,21 @@ class Plugin(simpleplugin.Plugin):
         for id_ in self._listing:
             self.links(id_)
 
-        # 1. Удалить из self._listing не действительные матчи
-        # 2. Удалить из thumb не действительные картинки и их кеши
-        #
-        artwork_real = []
+        artwork = []
         for id_, item in self._listing.items():
-            if id_ in self._listing:
-                if item['thumb']:
-                    artwork_real.append(item['thumb'])
-                if item['icon']:
-                    artwork_real.append(item['icon'])
-                if item['poster']:
-                    artwork_real.append(item['poster'])
-                if item['fanart']:
-                    artwork_real.append(item['fanart'])
-            else:
-                self.remove_thumb(item['thumb'])
-                self.remove_thumb(item['icon'])
-                self.remove_thumb(item['poster'])
-                self.remove_thumb(item['fanart'])
-
-        dir_thumb = self.dir('thumb')
-        files = os.listdir(dir_thumb)
-
+            if item['thumb']:
+                artwork.append(item['thumb'])
+            if item['icon']:
+                artwork.append(item['icon'])
+            if item['poster']:
+                artwork.append(item['poster'])
+            if item['fanart']:
+                artwork.append(item['fanart'])
+            
         # подчищаем хвосты
-        for file in files:
-            f = os.path.join(dir_thumb, file)
-            if f not in artwork_real:
+        for file in os.listdir(self.dir('thumb')):
+            f = os.path.join(self.dir('thumb'), file)
+            if f not in artwork:
                 self.remove_thumb(f)
 
         self._listing = OrderedDict(
