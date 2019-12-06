@@ -100,10 +100,10 @@ class Plugin(simpleplugin.Plugin):
 
         if not links:
             return [{'label': 'Ссылок на трансляции нет, возможно появятся позже!',
-                     'info': {'video': {'title': 'https://www.pimpletv.ru', 'plot': 'https://www.pimpletv.ru'}},
+                     'info': {'video': {'title': self._site, 'plot': self._site}},
                      'art': {'icon': self.icon, 'thumb': self.icon, },
                      'url': self.get_url(action='play',
-                                         href='https://www.ixbt.com/multimedia/video-methodology/camcorders-and-others/htc-one-x-avc-baseline@l3.2-1280x720-variable-fps-aac-2ch.mp4'),
+                                         href='https://www.ixbt.com/multimedia/video-methodology/bitrates/avc-1080-25p/1080-25p-10mbps.mp4'),
                      'is_playable': True}]
 
         return self._get_links(id)
@@ -114,16 +114,18 @@ class Plugin(simpleplugin.Plugin):
         :param id: id элемента
         :return:
         """
-        links = self._listing[id]['href']
-
-        self.logd('links - id - %s' % id, links)
+        links = self._listing[id]['href']        
 
         dt = self._get_minute_delta_now(id)
 
-        if links or dt < -140 or dt > 60:
+        self.logd('links - id - %s : dt - %s' % (id, dt), links)
+
+        if links and dt < self.get_setting('delta_links'):
             return links
 
         html = self.http_get(self._listing[id]['url_links'])
+
+        del links[:]
 
         links.extend(self._parse_links(html))
 
@@ -198,7 +200,7 @@ class Plugin(simpleplugin.Plugin):
             if dt > self.get_setting('delta_scan'):
                 return True  #
         except Exception as e:
-            self.logd('is_update', e)
+            self.logd('ERROR -> is_update', e)
             return True
         return False
 
@@ -222,7 +224,7 @@ class Plugin(simpleplugin.Plugin):
             if 'href' not in params or not params['href']:
                 msg = 'НЕТ ССЫЛОК НА ТРАНСЛЯЦИЮ МАТЧА!'
                 self.logd('play', msg)
-                self.notification(msg)
+                xbmcgui.Dialog().notification(self.name, msg, self.icon, 500)
                 return None
 
         href = params['href']
@@ -236,7 +238,7 @@ class Plugin(simpleplugin.Plugin):
 
         if not path:
             msg = 'ПУСТОЙ ПУТЬ НА ТРАНСЛЯЦИЮ МАТЧА!'
-            self.notification(msg)
+            xbmcgui.Dialog().notification(self.name, msg, self.icon, 500)
             self.logd('play', msg)
             return None
 
@@ -369,16 +371,6 @@ class Plugin(simpleplugin.Plugin):
         thumb_cached = thumb_cached.replace('tbn', 'png')
         return os.path.join(os.path.join(xbmc.translatePath("special://thumbnails"), thumb_cached[0], thumb_cached))
 
-    def notification(self, msg):
-        """
-        Выводит уведомление о пустой ссылке
-        :param msg:
-        :return:
-        """
-        title = self.name.encode('utf-8')
-        time = 500
-        icon = self.icon.encode('utf-8')
-        xbmc.executebuiltin('Notification(%s, %s, %d, %s)' % (title, msg, time, icon))
 
     @staticmethod
     def get_path_sopcast(href):
@@ -441,10 +433,11 @@ class Plugin(simpleplugin.Plugin):
         dt = dt.replace(tzinfo=tz)
         return dt.astimezone(tzlocal())
 
-    def on_settings_changed(self):        
-        dialog = xbmcgui.Dialog()
+    
+
+    def on_settings_changed(self):
         self.settings_changed = True        
-        dialog.notification(
+        xbmcgui.Dialog().notification(
                 'Изменение настроек PimpleTV', 'Подождите пожалуйста!', xbmcgui.NOTIFICATION_INFO, 10000)
         self.update()        
         self.settings_changed = False   
@@ -457,8 +450,7 @@ class Plugin(simpleplugin.Plugin):
         :return:
         """        
         xbmc.executebuiltin('Dialog.Close(all,true)')
-        dialog = xbmcgui.Dialog()
-        dialog.notification(
+        xbmcgui.Dialog().notification(
             'PimpleTV', 'Обновление данных плагина', self.icon, 20000)
         self.log('START RESET')
         self.remove_all_thumb()
