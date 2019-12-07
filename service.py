@@ -9,17 +9,14 @@ import xbmcgui
 from default import plugin
 from resources.lib.plugin import Plugin
 
-# Настройки после которых не требуется обновление данных
-SETTING_NO_UPDATE = [
-    "is_default_ace",
-    "default_ace",
-    "ipace1",
-    "is_hls1",
-    "ipace2",
-    "is_hls2",
-    "ipproxy",
-    'delta_scan',
-    "delta_links",
+# Настройки после которых требуется обновление данных
+SETTING_UPDATE = [
+    'url_site',
+    'time_zone_site',
+    'is_poster',
+    'is_thumb',
+    'is_fanart',
+    'is_play',
 ]
 
 class Monitor(xbmc.Monitor):
@@ -30,18 +27,17 @@ class Monitor(xbmc.Monitor):
 
     def _get_settings(self):
         noupdate = {}
-        for name_setting in SETTING_NO_UPDATE:
+        for name_setting in SETTING_UPDATE:
             noupdate[name_setting] = plugin.get_setting(name_setting)
         return noupdate
 
     def onSettingsChanged(self):
         super(Monitor, self).onSettingsChanged()
         new_settings = self._get_settings()
-        if new_settings == self._settings:
+        if new_settings != self._settings:
             plugin.on_settings_changed()
-            xbmc.executebuiltin('Container.Refresh()')
-        else:
             self._settings = new_settings
+            xbmc.executebuiltin('Container.Refresh()')
 
 
 if __name__ == "__main__":

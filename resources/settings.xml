@@ -12,7 +12,7 @@
 		<setting id="is_play" type="bool" label="Воспроизвести сразу без выбора ссылок" default="false"/>
         <setting label="Ссылка по умолчанию для воспроизведения" type="labelenum" id="play_engine" values="Ace Stream|SopCast" default="Ace Stream" visible="eq(-1,true)" />
         <setting id="is_debug" type="bool" label="Включить отладочный режим" default="true" visible="false"/>		
-		<setting id="reset" type="action" label="Обновление данных" action="RunPlugin(plugin://plugin.video.pimpletv?action=reset)" />
+		<setting id="reset" option="close" type="action" label="Обновление данных" action="RunPlugin(plugin://plugin.video.pimpletv?action=reset)" />
 	</category>
 	<category label="AceStream"> 
 		<setting id="is_default_ace" type="bool" label="Использовать по-умолчанию способ воспроизведения AceStream" default="false"/>

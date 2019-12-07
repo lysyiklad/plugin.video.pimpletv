@@ -48,7 +48,7 @@ class Plugin(simpleplugin.Plugin):
         self.load()
 
     @abstractmethod
-    def _parse_listing(self, html):
+    def _parse_listing(self, html, progress=None):
         """
         Парсим страницу для основного списка
         :param html: страница html
@@ -144,16 +144,28 @@ class Plugin(simpleplugin.Plugin):
         if not self.is_update():
             return
 
+        progress = xbmcgui.DialogProgressBG()
+
+        progress.create(self.name, 'ОБНОВЛЕНИЕ ДАННЫХ ...')
+
         self.log('START UPDATE')
 
         self._date_scan = datetime.datetime.now()
+
+        progress.update(10, message='Загрузка данных сайта')
+
         # html = GET_FILE(os.path.join(self._plugin.path, 'PimpleTV.htm'))
         html = self.http_get(self._site)
 
-        self._listing = self._parse_listing(html)
+        self._listing = self._parse_listing(html, progress=progress)
 
-        for id_ in self._listing:
-            self.links(id_)
+        percent = 60
+        #progress.update(percent, self.name, 'Сканирование ссылок...')
+        i = 40 // len(self._listing)        
+        for val in self._listing.values():
+            percent += i
+            progress.update(percent, '%s: cканирование ссылок' % self.name, val['match'])             
+            self.links(val['id'])
 
         artwork = []
         for id_, item in self._listing.items():
@@ -176,8 +188,11 @@ class Plugin(simpleplugin.Plugin):
             sorted(self._listing.items(), key=lambda t: t[1]['date']))
 
         self.dump()
-        # self.log(self._listing)
         self.log('STOP UPDATE')
+        progress.update(100, self.name, 'Завершение обновлений...')
+        xbmc.sleep(2)
+
+        progress.close()
 
         # self.stop_update = False
         # self.logd('plugin.update - self.stop_update', self.stop_update)
@@ -438,10 +453,10 @@ class Plugin(simpleplugin.Plugin):
     def on_settings_changed(self):
         self.settings_changed = True        
         xbmcgui.Dialog().notification(
-                'Изменение настроек PimpleTV', 'Подождите пожалуйста!', xbmcgui.NOTIFICATION_INFO, 10000)
+                'Изменение настроек PimpleTV', 'Подождите пожалуйста!', xbmcgui.NOTIFICATION_INFO, 1000)
         self.update()        
         self.settings_changed = False   
-        xbmc.executebuiltin('Dialog.Close(all,true)')
+        #xbmc.executebuiltin('Dialog.Close(all,true)')
         
 
     def reset(self):
@@ -449,12 +464,12 @@ class Plugin(simpleplugin.Plugin):
         Сброс списков
         :return:
         """        
-        xbmc.executebuiltin('Dialog.Close(all,true)')
+        #xbmc.executebuiltin('Dialog.Close(all,true)')
         xbmcgui.Dialog().notification(
             'PimpleTV', 'Обновление данных плагина', self.icon, 20000)
         self.log('START RESET')
         self.remove_all_thumb()
         self.update()
         self.log('END RESET')
-        xbmc.executebuiltin('Dialog.Close(all,true)')
+        #xbmc.executebuiltin('Dialog.Close(all,true)')
         xbmc.executebuiltin('Container.Refresh()')

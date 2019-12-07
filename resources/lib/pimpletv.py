@@ -12,6 +12,7 @@ from dateutil.tz import tzlocal, tzoffset
 from .makepic import CreatePictures
 from .plugin import Plugin
 
+
 MONTHS = {u"января": u"January",
           u"февраля": u"February",
           u"марта": u"March",
@@ -58,18 +59,22 @@ class PimpleTV(Plugin):
         super(PimpleTV, self).__init__()
         self._picmake = CreatePictures(self)
 
-    def _parse_listing(self, html):
+    def _parse_listing(self, html, progress=None):
         """
         Парсим страницу для основного списка
         :param html:
         :return:
         """
 
+        
+
         listing = {}
 
         soup = bs4.BeautifulSoup(html, 'html.parser')
 
         streams_day_soup = soup.findAll('div', {'class': 'streams-day'})
+
+        i = 1
 
         for day_soup in streams_day_soup:
             day = '%s %s %s %s' % (
@@ -114,6 +119,12 @@ class PimpleTV(Plugin):
                             self.logd(
                                 'parse_listing', 'ADD MATCH - %s - %s' % (date_local, match))
 
+                            i += 2
+                            if progress:
+                                progress.update(i, message=match)
+
+                            
+
                             listing[id] = {}
                             item = listing[id]
                             item['id'] = id
@@ -133,6 +144,7 @@ class PimpleTV(Plugin):
                         break
                 except Exception as e:
                     self.logd('parse_listing', e)
+
 
         return listing
 
