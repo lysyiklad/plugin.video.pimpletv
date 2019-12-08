@@ -45,6 +45,8 @@ class Plugin(simpleplugin.Plugin):
         self._date_scan = datetime.datetime.now()
         self._listing = OrderedDict()
 
+        #self._count_parser_links = 2
+
         self.load()
 
     @abstractmethod
@@ -138,6 +140,7 @@ class Plugin(simpleplugin.Plugin):
         Обновление списков для виртуальных папок, рисунков, удаление мусора, сохранение в pickle
         :return:
         """
+        #try:
         self.logd('plugin.update - self.settings_changed', self.settings_changed)
 
         # Проверка необходимости обновления БД
@@ -159,16 +162,43 @@ class Plugin(simpleplugin.Plugin):
 
         self._listing = self._parse_listing(html, progress=progress)
 
-        percent = 60
-        #progress.update(percent, self.name, 'Сканирование ссылок...')
-        i = 40 // len(self._listing)        
-        for val in self._listing.values():
-            percent += i
-            progress.update(percent, '%s: cканирование ссылок' % self.name, val['match'])             
-            self.links(val['id'])
+        if not self._listing:
+            self.logd('update', 'self._listing None')
+            return
+
+        if self.get_setting('is_noold_match'):
+            for id in self._listing.keys():
+                dt = self._get_minute_delta_now(id)
+                self.log(dt)
+                if dt < -130:
+                    del self._listing[id]
+
+
+        for item in self._listing.values():
+            if 'thumb' not in item:
+                item['thumb'] = ''
+            if 'icon' not in item:
+                item['icon'] = ''
+            if 'poster' not in item:
+                item['poster'] = ''
+            if 'fanart' not in item:
+                item['fanart'] = ''
+            if 'url_links' not in item:
+                item['url_links'] = ''
+            if 'href' not in item:
+                item['href'] = []
+
+        if self.get_setting('is_pars_links'):
+            percent = 60
+            #progress.update(percent, self.name, 'Сканирование ссылок...')
+            i = 40 // len(self._listing)        
+            for val in self._listing.values():
+                percent += i
+                progress.update(percent, '%s: cканирование ссылок' % self.name, val['match'])             
+                self.links(val['id'])
 
         artwork = []
-        for id_, item in self._listing.items():
+        for item in self._listing.values():
             if item['thumb']:
                 artwork.append(item['thumb'])
             if item['icon']:
@@ -194,8 +224,12 @@ class Plugin(simpleplugin.Plugin):
 
         progress.close()
 
-        # self.stop_update = False
-        # self.logd('plugin.update - self.stop_update', self.stop_update)
+        # except Exception as e:
+        #     xbmcgui.Dialog().notification(self.name, 'ERROR %s' % str(e),
+        #                                 xbmcgui.NOTIFICATION_ERROR, 2000)
+        #     err = '*** UPDATE ERROR: %s ' % str(e)
+        #     self.log(err)
+
 
     def is_update(self):
         """
@@ -302,24 +336,19 @@ class Plugin(simpleplugin.Plugin):
     def dir(self, dir_):
         return self._dir[dir_]
 
-    def http_get(self, url):
-        try:
-            req = urllib2.Request(url=url)
-            req.add_header('User-Agent',
-                           'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; Mozilla/4.0'
-                           ' (compatible; MSIE 6.0; Windows NT 5.1; SV1) ; .NET CLR 1.1.4322; .NET CLR 2.0.50727; '
-                           '.NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)')
+    def http_get(self, url):        
+        req = urllib2.Request(url=url)
+        req.add_header('User-Agent',
+                        'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; Mozilla/4.0'
+                        ' (compatible; MSIE 6.0; Windows NT 5.1; SV1) ; .NET CLR 1.1.4322; .NET CLR 2.0.50727; '
+                        '.NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)')
 
-            response = urllib2.urlopen(req)
-            self.log(self._get_response_info(response))
-            html = response.read()
-            response.close()
-            return html
-        except Exception as e:
-            xbmcgui.Dialog().notification('Ошибка запроса', str(e),
-                                          xbmcgui.NOTIFICATION_ERROR, 10000)
-            err = '*** HTTP ERROR: %s - url: %s ' % (str(e), url)
-            self.log(err)
+        response = urllib2.urlopen(req)
+        self.log(self._get_response_info(response))
+        html = response.read()
+        response.close()
+        return html
+        
 
     @staticmethod
     def _get_response_info(response):
@@ -453,7 +482,7 @@ class Plugin(simpleplugin.Plugin):
     def on_settings_changed(self):
         self.settings_changed = True        
         xbmcgui.Dialog().notification(
-                'Изменение настроек PimpleTV', 'Подождите пожалуйста!', xbmcgui.NOTIFICATION_INFO, 1000)
+            self.name, 'Изменение настроек !', xbmcgui.NOTIFICATION_INFO, 500)
         self.update()        
         self.settings_changed = False   
         #xbmc.executebuiltin('Dialog.Close(all,true)')
@@ -466,7 +495,7 @@ class Plugin(simpleplugin.Plugin):
         """        
         #xbmc.executebuiltin('Dialog.Close(all,true)')
         xbmcgui.Dialog().notification(
-            'PimpleTV', 'Обновление данных плагина', self.icon, 20000)
+            self.name, 'Обновление данных плагина', self.icon, 500)
         self.log('START RESET')
         self.remove_all_thumb()
         self.update()

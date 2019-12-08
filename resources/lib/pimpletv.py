@@ -137,7 +137,7 @@ class PimpleTV(Plugin):
                             item['fanart'] = fanart
                             item['url_links'] = self._site + \
                                 col.find('div', 'live-teams').a['href']
-                            if 'href' is not item:
+                            if 'href' not in item:
                                 item['href'] = []
 
                     else:
@@ -247,7 +247,7 @@ class PimpleTV(Plugin):
 
                 label = u'[COLOR %s]%s[/COLOR] - [B]%s[/B]' % (
                     status, date_broadcast.strftime('%H:%M'), item['match'])
-                plot = title + '\n' + plot
+                plot = title + '\n' + plot + '\n\n' + self._site
 
                 is_folder = True
                 is_playable = False

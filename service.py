@@ -17,6 +17,8 @@ SETTING_UPDATE = [
     'is_thumb',
     'is_fanart',
     'is_play',
+    'is_pars_links',
+    'is_noold_match',
 ]
 
 class Monitor(xbmc.Monitor):
@@ -43,8 +45,9 @@ class Monitor(xbmc.Monitor):
 if __name__ == "__main__":
     monitor = Monitor()
     while not monitor.abortRequested():
-        plugin.log('START SERVICE!')
-        plugin.update()
-        plugin.log('STOP SERVICE!')
+        if not xbmc.Player().isPlaying():
+            plugin.log('START SERVICE!')
+            plugin.update()
+            plugin.log('STOP SERVICE!')
         if monitor.waitForAbort(plugin.get_setting('delta_scan') * 60):
             break
