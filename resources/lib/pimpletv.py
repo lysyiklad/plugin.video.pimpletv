@@ -66,8 +66,6 @@ class PimpleTV(Plugin):
         :return:
         """
 
-        
-
         listing = {}
 
         soup = bs4.BeautifulSoup(html, 'html.parser')
@@ -123,8 +121,6 @@ class PimpleTV(Plugin):
                             if progress:
                                 progress.update(i, message=match)
 
-                            
-
                             listing[id] = {}
                             item = listing[id]
                             item['id'] = id
@@ -144,7 +140,6 @@ class PimpleTV(Plugin):
                         break
                 except Exception as e:
                     self.logd('parse_listing', e)
-
 
         return listing
 
@@ -178,16 +173,17 @@ class PimpleTV(Plugin):
 
         return links
 
-    def _get_links(self, id):
+    def _get_links(self, id, links):
         """
         Возвращаем список ссылок для папки конкретного элемента
         :param id:
         :return:
         """
         item = self.item(id)
-        links = []
 
-        for link in self.links(id):
+        l = []
+
+        for link in links:
 
             urlprs = urlparse(link['href'])
 
@@ -201,16 +197,16 @@ class PimpleTV(Plugin):
             else:
                 icon = os.path.join(self.dir('media'), 'http.png')
 
-            links.append({'label': '%s - %s - %s' % (link['title'], link['kbps'], link['resol']),
-                          'info': {'video': {'title': item['match'], 'plot': plot}},
-                          'thumb': icon,
-                          'icon': icon,
-                          'fanart': '',
-                          'art': {'icon': icon, 'thumb': icon, },
-                          'url': self.get_url(action='play', href=link['href'], id=id),
-                          'is_playable': True})
+            l.append({'label': '%s - %s - %s' % (link['title'], link['kbps'], link['resol']),
+                      'info': {'video': {'title': item['match'], 'plot': plot}},
+                      'thumb': icon,
+                      'icon': icon,
+                      'fanart': '',
+                      'art': {'icon': icon, 'thumb': icon, },
+                      'url': self.get_url(action='play', href=link['href'], id=id),
+                      'is_playable': True})
 
-        return links
+        return l
 
     def _get_listing(self):
         """

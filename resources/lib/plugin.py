@@ -42,10 +42,8 @@ class Plugin(simpleplugin.Plugin):
         self.settings_changed = False
         self.stop_update = False
 
-        self._date_scan = datetime.datetime.now()
+        self._date_scan = None
         self._listing = OrderedDict()
-
-        #self._count_parser_links = 2
 
         self.load()
 
@@ -72,7 +70,7 @@ class Plugin(simpleplugin.Plugin):
         pass
 
     @abstractmethod
-    def _get_links(self, id):
+    def _get_links(self, id, links):
         pass
 
     def create_listing_(self):
@@ -108,7 +106,7 @@ class Plugin(simpleplugin.Plugin):
                                          href='https://www.ixbt.com/multimedia/video-methodology/bitrates/avc-1080-25p/1080-25p-10mbps.mp4'),
                      'is_playable': True}]
 
-        return self._get_links(id)
+        return self._get_links(id, links)
 
     def links(self, id):
         """
@@ -116,22 +114,23 @@ class Plugin(simpleplugin.Plugin):
         :param id: id элемента
         :return:
         """
-        links = self._listing[id]['href']        
+        links = self._listing[id]['href']
+        tnd = self._time_now_date(id)
+        tsn = self._time_scan_now()
 
-        dt = self._get_minute_delta_now(id)
+        if not links or not self._date_scan or (tsn > 30 and tnd < 30) or tsn > self.get_setting('delta_scan'):
+            self.logd('links - id - %s : time now date - %s time scan now - %s' %
+                      (id, tnd, tsn), links)
+            html = self.http_get(self._listing[id]['url_links'])
+            if not html:
+                self.logd('links', 'not html')
+                return links
+            del links[:]
+            links.extend(self._parse_links(html))
+            if links:
+                self.dump()
 
-        self.logd('links - id - %s : dt - %s' % (id, dt), links)
-
-        if links and dt < self.get_setting('delta_links'):
-            return links
-
-        html = self.http_get(self._listing[id]['url_links'])
-
-        del links[:]
-
-        links.extend(self._parse_links(html))
-
-        self.logd('self._listing[id][href]', self._listing[id]['href'])
+        self.logd('self._listing[%s][href]' % id, self._listing[id]['href'])
 
         return links
 
@@ -140,8 +139,9 @@ class Plugin(simpleplugin.Plugin):
         Обновление списков для виртуальных папок, рисунков, удаление мусора, сохранение в pickle
         :return:
         """
-        #try:
-        self.logd('plugin.update - self.settings_changed', self.settings_changed)
+        
+        self.logd('plugin.update - self.settings_changed',
+                  self.settings_changed)
 
         # Проверка необходимости обновления БД
         if not self.is_update():
@@ -152,8 +152,6 @@ class Plugin(simpleplugin.Plugin):
         progress.create(self.name, 'ОБНОВЛЕНИЕ ДАННЫХ ...')
 
         self.log('START UPDATE')
-
-        self._date_scan = datetime.datetime.now()
 
         progress.update(10, message='Загрузка данных сайта')
 
@@ -168,11 +166,9 @@ class Plugin(simpleplugin.Plugin):
 
         if self.get_setting('is_noold_match'):
             for id in self._listing.keys():
-                dt = self._get_minute_delta_now(id)
-                self.log(dt)
-                if dt < -130:
+                dt = self._time_now_date(id)
+                if dt < -180:
                     del self._listing[id]
-
 
         for item in self._listing.values():
             if 'thumb' not in item:
@@ -191,10 +187,15 @@ class Plugin(simpleplugin.Plugin):
         if self.get_setting('is_pars_links'):
             percent = 60
             #progress.update(percent, self.name, 'Сканирование ссылок...')
-            i = 40 // len(self._listing)        
+            l = len(self._listing)
+            if l:
+                i = 40 // l
+            else:
+                i = 2
             for val in self._listing.values():
                 percent += i
-                progress.update(percent, '%s: cканирование ссылок' % self.name, val['match'])             
+                progress.update(percent, '%s: cканирование ссылок' %
+                                self.name, val['match'])
                 self.links(val['id'])
 
         artwork = []
@@ -207,7 +208,7 @@ class Plugin(simpleplugin.Plugin):
                 artwork.append(item['poster'])
             if item['fanart']:
                 artwork.append(item['fanart'])
-            
+
         # подчищаем хвосты
         for file in os.listdir(self.dir('thumb')):
             f = os.path.join(self.dir('thumb'), file)
@@ -217,6 +218,7 @@ class Plugin(simpleplugin.Plugin):
         self._listing = OrderedDict(
             sorted(self._listing.items(), key=lambda t: t[1]['date']))
 
+        self._date_scan = datetime.datetime.now()
         self.dump()
         self.log('STOP UPDATE')
         progress.update(100, self.name, 'Завершение обновлений...')
@@ -224,12 +226,7 @@ class Plugin(simpleplugin.Plugin):
 
         progress.close()
 
-        # except Exception as e:
-        #     xbmcgui.Dialog().notification(self.name, 'ERROR %s' % str(e),
-        #                                 xbmcgui.NOTIFICATION_ERROR, 2000)
-        #     err = '*** UPDATE ERROR: %s ' % str(e)
-        #     self.log(err)
-
+        
 
     def is_update(self):
         """
@@ -237,20 +234,27 @@ class Plugin(simpleplugin.Plugin):
         :return: True - обновляем, False - нет
         """
         try:
+            if not self._date_scan:
+                self.logd('is_update', 'not self._date_scan')
+                return True
             if self.settings_changed:
-                #self.settings_changed = False
+                self.logd('is_update', 'self.settings_changed')
                 return True
             if not os.path.exists(self._listing_pickle):
+                self.logd(
+                    'is_update', 'not os.path.exists(self._listing_pickle)')
                 return True
             if not self._listing:
+                self.logd('is_update', 'not self._listing')
                 return True
-            dt = int((datetime.datetime.now() - self._date_scan).total_seconds() / 60)
-            # Время сканирования меньше текущего времени на self.get_setting('delta_scan', True) - мин.
-            if dt > self.get_setting('delta_scan'):
+            if self._time_scan_now() > self.get_setting('delta_scan'):
+                self.logd(
+                    'is_update', 'self._time_scan_now() > self.get_setting(delta_scan)')
                 return True  #
         except Exception as e:
             self.logd('ERROR -> is_update', e)
             return True
+        self.logd('is_update', 'False')
         return False
 
     def play(self, params):
@@ -265,7 +269,7 @@ class Plugin(simpleplugin.Plugin):
         self.logd('play', params)
         if 'href' not in params or not params['href']:
             links = self.links(int(params['id']))
-            self.logd('play', links)
+            self.logd('play links', links)
             for h in links:
                 if h['title'] == self.get_setting('play_engine').decode('utf-8'):
                     params['href'] = h['href']
@@ -300,9 +304,12 @@ class Plugin(simpleplugin.Plugin):
         return self._date_scan
 
     def load(self):
-        if os.path.exists(self._listing_pickle):
-            with open(self._listing_pickle, 'rb') as f:
-                self._date_scan, self._listing = pickle.load(f)
+        try:
+            if os.path.exists(self._listing_pickle):
+                with open(self._listing_pickle, 'rb') as f:
+                    self._date_scan, self._listing = pickle.load(f)
+        except Exception as e:
+            self.logd('ERROR load', str(e))
 
     def dump(self):
         with open(self._listing_pickle, 'wb') as f:
@@ -323,36 +330,60 @@ class Plugin(simpleplugin.Plugin):
         """
         return hash(key)
 
-    def _get_minute_delta_now(self, id):
+    def _time_now_date(self, id):
         """
-        Время в минутах до даты в элементе списка. Если матча с таким id нет, возвращаем None
+        Время в минутах от текущего времени до даты в элементе списка. Если матча с таким id нет, возвращаем None
         """
         if id not in self._listing:
             return None
 
-        dt = int((self._listing[id]['date'] - datetime.datetime.now().replace(tzinfo=tzlocal())).total_seconds() / 60)
-        return dt
+        return int((self._listing[id]['date'] - datetime.datetime.now().replace(tzinfo=tzlocal())).total_seconds() / 60)
+
+    def _time_scan_now(self):
+        """
+        Время в минутах от последнего сканирования до текущего времени
+        """
+        if self._date_scan is None:
+            return None
+        return int((datetime.datetime.now() - self._date_scan).total_seconds() / 60)
+
+    def _time_scan_date(self, id):
+        """
+        Время в минутах от последнего сканирования до даты в элементе списка. Если матча с таким id нет, возвращаем None
+        """
+        tnd = self._time_now_date(id)
+        if tnd is None:
+            return None
+        tsn = self._time_scan_now
+        return tnd + tsn
 
     def dir(self, dir_):
         return self._dir[dir_]
 
-    def http_get(self, url):        
-        req = urllib2.Request(url=url)
-        req.add_header('User-Agent',
+    def http_get(self, url):
+        try:
+            req = urllib2.Request(url=url)
+            req.add_header('User-Agent',
                         'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; Mozilla/4.0'
                         ' (compatible; MSIE 6.0; Windows NT 5.1; SV1) ; .NET CLR 1.1.4322; .NET CLR 2.0.50727; '
                         '.NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)')
 
-        response = urllib2.urlopen(req)
-        self.log(self._get_response_info(response))
-        html = response.read()
-        response.close()
-        return html
-        
+            response = urllib2.urlopen(req)
+            self.log(self._get_response_info(response))
+            html = response.read()
+            response.close()
+            return html
+        except Exception as e:
+            # xbmcgui.Dialog().notification(self.name, 'HTTP ERROR %s' % str(e),
+            #                             xbmcgui.NOTIFICATION_ERROR, 2000)
+            err = '*** HTTP ERROR: %s ' % str(e)
+            self.log(err)
+            return ''
 
     @staticmethod
     def _get_response_info(response):
-        response_info = ['Response info', 'Status code: {0}'.format(response.code)]
+        response_info = ['Response info',
+                         'Status code: {0}'.format(response.code)]
         if response.code != 200:
             raise Exception('Error (%s) в %s ' %
                             (response.code, response.geturl()))
@@ -389,7 +420,7 @@ class Plugin(simpleplugin.Plugin):
 
     def remove_all_thumb(self):
         """
-        
+
         :return: 
         """
         pics = os.listdir(self.dir('thumb'))
@@ -415,7 +446,6 @@ class Plugin(simpleplugin.Plugin):
         thumb_cached = thumb_cached.replace('tbn', 'png')
         return os.path.join(os.path.join(xbmc.translatePath("special://thumbnails"), thumb_cached[0], thumb_cached))
 
-
     @staticmethod
     def get_path_sopcast(href):
         url = urlparse(href)
@@ -436,13 +466,16 @@ class Plugin(simpleplugin.Plugin):
         else:
             dialog = xbmcgui.Dialog()
             list = [
-                'ACESTREAM %s [%s]' % ('hls' if self.get_setting('is_hls1') else '', self.get_setting('ipace1')),
-                'ACESTREAM %s [%s]' % ('hls' if self.get_setting('is_hls2') else '', self.get_setting('ipace2')),
+                'ACESTREAM %s [%s]' % ('hls' if self.get_setting(
+                    'is_hls1') else '', self.get_setting('ipace1')),
+                'ACESTREAM %s [%s]' % ('hls' if self.get_setting(
+                    'is_hls2') else '', self.get_setting('ipace2')),
                 'HTTPAceProxy [%s]' % self.get_setting('ipproxy'),
                 'Add-on TAM [127.0.0.1]']
 
             if self.version_kodi < 17:
-                item = dialog.select('Выбор способа воспроизведения Ace Straem', list=list)
+                item = dialog.select(
+                    'Выбор способа воспроизведения Ace Straem', list=list)
             else:
                 item = dialog.contextmenu(list)
 
@@ -477,28 +510,25 @@ class Plugin(simpleplugin.Plugin):
         dt = dt.replace(tzinfo=tz)
         return dt.astimezone(tzlocal())
 
-    
-
     def on_settings_changed(self):
-        self.settings_changed = True        
+        self.settings_changed = True
         xbmcgui.Dialog().notification(
             self.name, 'Изменение настроек !', xbmcgui.NOTIFICATION_INFO, 500)
-        self.update()        
-        self.settings_changed = False   
-        #xbmc.executebuiltin('Dialog.Close(all,true)')
-        
+        self.update()
+        self.settings_changed = False
+        # xbmc.executebuiltin('Dialog.Close(all,true)')
 
     def reset(self):
         """
         Сброс списков
         :return:
-        """        
-        #xbmc.executebuiltin('Dialog.Close(all,true)')
+        """
+        # xbmc.executebuiltin('Dialog.Close(all,true)')
         xbmcgui.Dialog().notification(
             self.name, 'Обновление данных плагина', self.icon, 500)
         self.log('START RESET')
         self.remove_all_thumb()
         self.update()
         self.log('END RESET')
-        #xbmc.executebuiltin('Dialog.Close(all,true)')
+        # xbmc.executebuiltin('Dialog.Close(all,true)')
         xbmc.executebuiltin('Container.Refresh()')
