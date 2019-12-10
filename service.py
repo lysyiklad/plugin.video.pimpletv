@@ -18,7 +18,7 @@ SETTING_UPDATE = [
     'is_fanart',
     'is_play',
     'is_pars_links',
-    'is_noold_match',
+    'is_noold_item',
 ]
 
 class Monitor(xbmc.Monitor):

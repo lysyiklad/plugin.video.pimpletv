@@ -3,18 +3,17 @@
 import datetime
 import os
 import pickle
-import urllib2
-from collections import OrderedDict
-from urlparse import urlparse
 from abc import abstractmethod
+from collections import OrderedDict
 
-from dateutil.parser import *
-from dateutil.tz import tzlocal, tzoffset
-
-from . import simpleplugin
+import urllib2
 import xbmc
 import xbmcgui
 import xbmcplugin
+from dateutil.tz import tzlocal, tzoffset, UTC
+from urlparse import urlparse
+
+from . import simpleplugin
 
 LISTING_PICKLE = 'listing.pickle'
 
@@ -37,15 +36,61 @@ class Plugin(simpleplugin.Plugin):
                      'lib': os.path.join(self.path, 'resources', 'lib'),
                      'thumb': os.path.join(self.config_dir, 'thumb')}
 
+        if not os.path.exists(self.dir('thumb')):
+            os.mkdir(self.dir('thumb'))
+
         self._site = self.get_setting('url_site')
         self._listing_pickle = os.path.join(self.config_dir, LISTING_PICKLE)
         self.settings_changed = False
         self.stop_update = False
 
-        self._date_scan = None
+        self._date_scan = None  # Время сканирования в utc
         self._listing = OrderedDict()
 
         self.load()
+
+    @staticmethod
+    def format_timedelta(dt, pref):
+        h = int(dt.seconds / 3600)
+        return u'{} {} {} {:02} мин.'.format(pref, u'%s дн.' % dt.days if dt.days else u'',
+                                             u'%s ч.' % h if h else u'', int(dt.seconds % 3600 / 60))
+
+    @staticmethod
+    def create_id(key):
+        """
+        Создаем id для записи
+        :param key: str оригинальная для записи строка
+        :return: возвращает id
+        """
+        return hash(key)
+
+    @staticmethod
+    def cache_thumb_name(thumb):
+        """
+        Находит кеш рисунка
+        :param thumb:
+        :return:
+        """
+        thumb_cached = xbmc.getCacheThumbName(thumb)
+        thumb_cached = thumb_cached.replace('tbn', 'png')
+        return os.path.join(os.path.join(xbmc.translatePath("special://thumbnails"), thumb_cached[0], thumb_cached))
+
+    @staticmethod
+    def get_path_sopcast(href):
+        url = urlparse(href)
+        path = "plugin://program.plexus/?mode=2&url=" + url.geturl() + "&name=Sopcast"
+        return path
+
+    @staticmethod
+    def _get_response_info(response):
+        response_info = ['Response info',
+                         'Status code: {0}'.format(response.code)]
+        if response.code != 200:
+            raise Exception('Error (%s) в %s ' %
+                            (response.code, response.geturl()))
+        response_info.append('URL: {0}'.format(response.geturl()))
+        response_info.append('Info: {0}'.format(response.info()))
+        return '\n'.join(response_info)
 
     @abstractmethod
     def _parse_listing(self, html, progress=None):
@@ -53,6 +98,24 @@ class Plugin(simpleplugin.Plugin):
         Парсим страницу для основного списка
         :param html: страница html
         :return: словарь словарей с данными для формирования списка корневой виртуальной папки
+        listing = {
+                    id : {
+                        id: int,
+                        label: '',
+                        date: datetime, # должно быть осведомленное время в UTC
+                        thumb: '',
+                        icon: '',
+                        poster: '',
+                        fanart: '',
+                        url_links: '', # ссылка на web страницу со ссылками на трансляции
+                        href: [
+                                {
+                                'id': int,
+                            }
+                        ]
+                    }
+                }
+
         """
         pass
 
@@ -62,6 +125,11 @@ class Plugin(simpleplugin.Plugin):
         Парсим страницу со ссылками
         :param html: страница html
         :return: список словарей для формирования списка папки со ссылками
+        [
+            {
+                'id': int,
+            }
+        ]
         """
         pass
 
@@ -72,6 +140,32 @@ class Plugin(simpleplugin.Plugin):
     @abstractmethod
     def _get_links(self, id, links):
         pass
+
+    @property
+    def date_scan(self):
+        return self._date_scan
+
+    @property
+    def version_kodi(self):
+        return int(xbmc.getInfoLabel('System.BuildVersion')[:2])
+
+    def dir(self, dir_):
+        return self._dir[dir_]
+
+    def get(self, id_, key):
+        return self._listing[id_][key]
+
+    def load(self):
+        try:
+            if os.path.exists(self._listing_pickle):
+                with open(self._listing_pickle, 'rb') as f:
+                    self._date_scan, self._listing = pickle.load(f)
+        except Exception as e:
+            self.logd('ERROR load', str(e))
+
+    def dump(self):
+        with open(self._listing_pickle, 'wb') as f:
+            pickle.dump([self.date_scan, self._listing], f)
 
     def create_listing_(self):
         return self.create_listing(self.get_listing(),
@@ -103,7 +197,8 @@ class Plugin(simpleplugin.Plugin):
                      'info': {'video': {'title': self._site, 'plot': self._site}},
                      'art': {'icon': self.icon, 'thumb': self.icon, },
                      'url': self.get_url(action='play',
-                                         href='https://www.ixbt.com/multimedia/video-methodology/bitrates/avc-1080-25p/1080-25p-10mbps.mp4'),
+                                         href='https://www.ixbt.com/multimedia/video-methodology/'
+                                              'bitrates/avc-1080-25p/1080-25p-10mbps.mp4'),
                      'is_playable': True}]
 
         return self._get_links(id, links)
@@ -114,23 +209,24 @@ class Plugin(simpleplugin.Plugin):
         :param id: id элемента
         :return:
         """
-        links = self._listing[id]['href']
+        links = self.get(id, 'href')
         tnd = self._time_now_date(id)
         tsn = self._time_scan_now()
+        dt = self.get_setting('delta_links')
 
-        if not links or not self._date_scan or (tsn > 30 and tnd < 30) or tsn > self.get_setting('delta_scan'):
+        if not links or not self.date_scan or (tsn > dt and tnd < dt) or tsn > self.get_setting('delta_scan'):
             self.logd('links - id - %s : time now date - %s time scan now - %s' %
                       (id, tnd, tsn), links)
-            html = self.http_get(self._listing[id]['url_links'])
+            html = self.http_get(self.get(id, 'url_links'))
             if not html:
                 self.logd('links', 'not html')
                 return links
             del links[:]
             links.extend(self._parse_links(html))
-            if links:
-                self.dump()
+            # if links:
+            #     self.dump()
 
-        self.logd('self._listing[%s][href]' % id, self._listing[id]['href'])
+        self.logd('self.get(%s, href)' % id, self.get(id, 'href'))
 
         return links
 
@@ -139,11 +235,10 @@ class Plugin(simpleplugin.Plugin):
         Обновление списков для виртуальных папок, рисунков, удаление мусора, сохранение в pickle
         :return:
         """
-        
+
         self.logd('plugin.update - self.settings_changed',
                   self.settings_changed)
 
-        # Проверка необходимости обновления БД
         if not self.is_update():
             return
 
@@ -155,16 +250,19 @@ class Plugin(simpleplugin.Plugin):
 
         progress.update(10, message='Загрузка данных сайта')
 
-        # html = GET_FILE(os.path.join(self._plugin.path, 'PimpleTV.htm'))
         html = self.http_get(self._site)
 
+        self.log('***** 1')
+
         self._listing = self._parse_listing(html, progress=progress)
+
+        self.log('***** 2')
 
         if not self._listing:
             self.logd('update', 'self._listing None')
             return
 
-        if self.get_setting('is_noold_match'):
+        if self.get_setting('is_noold_item'):
             for id in self._listing.keys():
                 dt = self._time_now_date(id)
                 if dt < -180:
@@ -184,19 +282,18 @@ class Plugin(simpleplugin.Plugin):
             if 'href' not in item:
                 item['href'] = []
 
+        self.log('***** 3')
+
         if self.get_setting('is_pars_links'):
             percent = 60
-            #progress.update(percent, self.name, 'Сканирование ссылок...')
-            l = len(self._listing)
-            if l:
-                i = 40 // l
-            else:
-                i = 2
+            i = (40 // len(self._listing)) if len(self._listing) else 2
             for val in self._listing.values():
                 percent += i
                 progress.update(percent, '%s: cканирование ссылок' %
-                                self.name, val['match'])
+                                self.name, val['label'])
                 self.links(val['id'])
+
+        self.log('***** 4')
 
         artwork = []
         for item in self._listing.values():
@@ -209,24 +306,24 @@ class Plugin(simpleplugin.Plugin):
             if item['fanart']:
                 artwork.append(item['fanart'])
 
-        # подчищаем хвосты
         for file in os.listdir(self.dir('thumb')):
             f = os.path.join(self.dir('thumb'), file)
             if f not in artwork:
                 self.remove_thumb(f)
 
-        self._listing = OrderedDict(
-            sorted(self._listing.items(), key=lambda t: t[1]['date']))
+        self.log('***** 5')
 
-        self._date_scan = datetime.datetime.now()
+        self._listing = OrderedDict(sorted(self._listing.items(), key=lambda t: t[1]['date']))
+
+        self._date_scan = self.time_now_utc()
         self.dump()
         self.log('STOP UPDATE')
         progress.update(100, self.name, 'Завершение обновлений...')
         xbmc.sleep(2)
 
-        progress.close()
+        self.log('***** 6')
 
-        
+        progress.close()
 
     def is_update(self):
         """
@@ -234,22 +331,22 @@ class Plugin(simpleplugin.Plugin):
         :return: True - обновляем, False - нет
         """
         try:
-            if not self._date_scan:
-                self.logd('is_update', 'not self._date_scan')
+            if not self.date_scan:
+                self.logd('is_update', 'True - not self.date_scan')
                 return True
             if self.settings_changed:
-                self.logd('is_update', 'self.settings_changed')
+                self.logd('is_update', 'True - self.settings_changed')
                 return True
             if not os.path.exists(self._listing_pickle):
                 self.logd(
-                    'is_update', 'not os.path.exists(self._listing_pickle)')
+                    'is_update', 'True - not os.path.exists(self._listing_pickle)')
                 return True
             if not self._listing:
-                self.logd('is_update', 'not self._listing')
+                self.logd('is_update', 'True - not self._listing')
                 return True
             if self._time_scan_now() > self.get_setting('delta_scan'):
                 self.logd(
-                    'is_update', 'self._time_scan_now() > self.get_setting(delta_scan)')
+                    'is_update', 'True - self._time_scan_now() > self.get_setting(delta_scan)')
                 return True  #
         except Exception as e:
             self.logd('ERROR -> is_update', e)
@@ -299,36 +396,42 @@ class Plugin(simpleplugin.Plugin):
 
         return self.resolve_url(path, succeeded=True)
 
-    @property
-    def date_scan(self):
-        return self._date_scan
-
-    def load(self):
-        try:
-            if os.path.exists(self._listing_pickle):
-                with open(self._listing_pickle, 'rb') as f:
-                    self._date_scan, self._listing = pickle.load(f)
-        except Exception as e:
-            self.logd('ERROR load', str(e))
-
-    def dump(self):
-        with open(self._listing_pickle, 'wb') as f:
-            pickle.dump([self._date_scan, self._listing], f)
+    @staticmethod
+    def time_now_utc():
+        """
+        Возвращает текущее осведомленное(aware) время в UTC
+        :return:
+        """
+        return datetime.datetime.now(tz=UTC)
 
     @staticmethod
-    def format_timedelta(dt, pref):
-        h = int(dt.seconds / 3600)
-        return u'{} {} {} {:02} мин.'.format(pref, u'%s дн.' % dt.days if dt.days else u'',
-                                             u'%s ч.' % h if h else u'', int(dt.seconds % 3600 / 60))
+    def time_to_local(dt):
+        """
+        Переводит осведомленное (aware) время в локальное осведомленное
+        :param dt: осведомленное (aware) время
+        :return: локальное осведомленное (aware)
+        """
+        return dt.astimezone(tzlocal())
 
-    @staticmethod
-    def create_id(key):
+    def _time_naive_site_to_local_aware(self, dt):
         """
-        Создаем id для записи
-        :param key: str оригинальная для записи строка
-        :return: возвращает id
+        Переводит наивное время из сайта в осведомленное (aware) локальное время
+        :param dt: datetime относительное (naive) время из результатов парсинга сайта
+        :return: datetime локальное осведомленное (aware) время
         """
-        return hash(key)
+        tz = tzoffset(None, int(self.get_setting('time_zone_site')) * 3600)
+        dt = dt.replace(tzinfo=tz)
+        return dt.astimezone(tzlocal())
+
+    def _time_naive_site_to_utc_aware(self, dt):
+        """
+        Переводит наивное время из сайта в осведомленное (aware) время UTC
+        :param dt: datetime относительное (naive) время из результатов парсинга сайта
+        :return: datetime UTC осведомленное (aware) время
+        """
+        tz = tzoffset(None, int(self.get_setting('time_zone_site')) * 3600)
+        dt = dt.replace(tzinfo=tz)
+        return dt.astimezone(UTC)
 
     def _time_now_date(self, id):
         """
@@ -337,36 +440,31 @@ class Plugin(simpleplugin.Plugin):
         if id not in self._listing:
             return None
 
-        return int((self._listing[id]['date'] - datetime.datetime.now().replace(tzinfo=tzlocal())).total_seconds() / 60)
+        return int((self.get(id, 'date') - self.time_now_utc()).total_seconds() / 60)
 
     def _time_scan_now(self):
         """
         Время в минутах от последнего сканирования до текущего времени
         """
-        if self._date_scan is None:
+        if self.date_scan is None:
             return None
-        return int((datetime.datetime.now() - self._date_scan).total_seconds() / 60)
+        return int((self.time_now_utc() - self.date_scan).total_seconds() / 60)
 
     def _time_scan_date(self, id):
         """
         Время в минутах от последнего сканирования до даты в элементе списка. Если матча с таким id нет, возвращаем None
         """
-        tnd = self._time_now_date(id)
-        if tnd is None:
+        if self.date_scan is None:
             return None
-        tsn = self._time_scan_now
-        return tnd + tsn
-
-    def dir(self, dir_):
-        return self._dir[dir_]
+        return int((self.get(id, 'date') - self.date_scan).total_seconds() / 60)
 
     def http_get(self, url):
         try:
             req = urllib2.Request(url=url)
             req.add_header('User-Agent',
-                        'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; Mozilla/4.0'
-                        ' (compatible; MSIE 6.0; Windows NT 5.1; SV1) ; .NET CLR 1.1.4322; .NET CLR 2.0.50727; '
-                        '.NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)')
+                           'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; Mozilla/4.0'
+                           ' (compatible; MSIE 6.0; Windows NT 5.1; SV1) ; .NET CLR 1.1.4322; .NET CLR 2.0.50727; '
+                           '.NET CLR 3.0.4506.2152; .NET CLR 3.5.30729; .NET4.0C)')
 
             response = urllib2.urlopen(req)
             self.log(self._get_response_info(response))
@@ -379,20 +477,6 @@ class Plugin(simpleplugin.Plugin):
             err = '*** HTTP ERROR: %s ' % str(e)
             self.log(err)
             return ''
-
-    @staticmethod
-    def _get_response_info(response):
-        response_info = ['Response info',
-                         'Status code: {0}'.format(response.code)]
-        if response.code != 200:
-            raise Exception('Error (%s) в %s ' %
-                            (response.code, response.geturl()))
-        response_info.append('URL: {0}'.format(response.geturl()))
-        response_info.append('Info: {0}'.format(response.info()))
-        return '\n'.join(response_info)
-
-    def item(self, id_):
-        return self._listing[id_]
 
     def remove_thumb(self, thumb):
         """
@@ -411,14 +495,13 @@ class Plugin(simpleplugin.Plugin):
         :param thumb: 
         :return: 
         """
-        # определяем кеши картинок и удаляем кеши картинок из системы
         if self.cache_thumb_name:
             thumb_cache = self.cache_thumb_name(thumb)
             self.logd('remove_cache_thumb', thumb_cache)
             if os.path.exists(thumb_cache):
                 os.remove(thumb_cache)
 
-    def remove_all_thumb(self):
+    def remove_all(self):
         """
 
         :return: 
@@ -427,30 +510,11 @@ class Plugin(simpleplugin.Plugin):
         for pic in pics:
             pic = os.path.join(self.dir('thumb'), pic)
             self.remove_thumb(pic)
-        if os.path.exists(self._listing_pickle):
-            os.remove(self._listing_pickle)
-            self.logd('remove listing.pickle', self._listing_pickle)
-
-    @property
-    def version_kodi(self):
-        return int(xbmc.getInfoLabel('System.BuildVersion')[:2])
-
-    @staticmethod
-    def cache_thumb_name(thumb):
-        """
-        Находит кеш рисунка
-        :param thumb:
-        :return:
-        """
-        thumb_cached = xbmc.getCacheThumbName(thumb)
-        thumb_cached = thumb_cached.replace('tbn', 'png')
-        return os.path.join(os.path.join(xbmc.translatePath("special://thumbnails"), thumb_cached[0], thumb_cached))
-
-    @staticmethod
-    def get_path_sopcast(href):
-        url = urlparse(href)
-        path = "plugin://program.plexus/?mode=2&url=" + url.geturl() + "&name=Sopcast"
-        return path
+        fs = os.listdir(self.config_dir)
+        for f in fs:
+            if f != 'settings.xml' and f != 'thumb':
+                f = os.path.join(self.config_dir, f)
+                os.remove(f)
 
     def get_path_acestream(self, href):
         """
@@ -500,16 +564,6 @@ class Plugin(simpleplugin.Plugin):
 
         return path
 
-    def convert_local_datetime(self, dt):
-        """
-        Переводит dt в локальное осведомленное (aware) время
-        :param dt: datetime относительное (naive) время
-        :return: datetime локальное осведомленное (aware) время
-        """
-        tz = tzoffset(None, int(self.get_setting('time_zone_site')) * 3600)
-        dt = dt.replace(tzinfo=tz)
-        return dt.astimezone(tzlocal())
-
     def on_settings_changed(self):
         self.settings_changed = True
         xbmcgui.Dialog().notification(
@@ -523,12 +577,29 @@ class Plugin(simpleplugin.Plugin):
         Сброс списков
         :return:
         """
-        # xbmc.executebuiltin('Dialog.Close(all,true)')
         xbmcgui.Dialog().notification(
             self.name, 'Обновление данных плагина', self.icon, 500)
         self.log('START RESET')
-        self.remove_all_thumb()
+        self.remove_all()
         self.update()
         self.log('END RESET')
         # xbmc.executebuiltin('Dialog.Close(all,true)')
         xbmc.executebuiltin('Container.Refresh()')
+
+    def geturl_isfolder_isplay(self, id, href):
+        """
+
+        :param id:
+        :param href:
+        :return:
+        """
+        is_folder = True
+        is_playable = False
+        get_url = self.get_url(action='links', id=id)
+
+        if self.get_setting('is_play'):
+            is_folder = False
+            is_playable = True
+            get_url = self.get_url(action='play', href=href, id=id)
+
+        return is_folder, is_playable, get_url

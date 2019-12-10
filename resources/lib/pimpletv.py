@@ -2,16 +2,14 @@
 
 import datetime
 import os
-# from collections import OrderedDict
-from urlparse import urlparse
 
 import bs4
 from dateutil.parser import *
-from dateutil.tz import tzlocal, tzoffset
+# from collections import OrderedDict
+from urlparse import urlparse
 
 from .makepic import CreatePictures
 from .plugin import Plugin
-
 
 MONTHS = {u"января": u"January",
           u"февраля": u"February",
@@ -28,32 +26,6 @@ MONTHS = {u"января": u"January",
 
 
 class PimpleTV(Plugin):
-    """
-
-            self._listing = {
-                id : {
-                    time: datetime,
-                    id: int,
-                    match: '',
-                    league: '',
-                    date: datetime,
-                    thumb: '',
-                    icon: '',
-                    poster: '',
-                    fanart: '',
-                    url_links: '',
-                    href: [
-                            {
-                            'id': int,
-                            'title': '',
-                            'kbps': '',
-                            'resol': '',
-                            'href': '',
-                        }
-                    ]
-                }
-            }
-        """
 
     def __init__(self):
         super(PimpleTV, self).__init__()
@@ -63,7 +35,28 @@ class PimpleTV(Plugin):
         """
         Парсим страницу для основного списка
         :param html:
-        :return:
+        :return:listing = {
+                        id : {
+                            id: int,
+                            label: '',
+                            league: '',
+                            date: datetime,     должно быть осведомленное время в UTC
+                            thumb: '',
+                            icon: '',
+                            poster: '',
+                            fanart: '',
+                            url_links: '',
+                            href: [
+                                    {
+                                    'id': int,
+                                    'title': '',
+                                    'kbps': '',
+                                    'resol': '',
+                                    'href': '',
+                                }
+                            ]
+                        }
+                    }
         """
 
         listing = {}
@@ -82,7 +75,6 @@ class PimpleTV(Plugin):
 
             for row in list(day_soup.next_siblings):
                 try:
-                    # if isinstance(row, bs4.element.Tag) and row['class'] == ['row']:
                     if row['class'] == ['row']:
                         cols = row.findAll(
                             'div', {'class': 'broadcast preview'})
@@ -91,48 +83,41 @@ class PimpleTV(Plugin):
                             str_time = col.find('div', 'bottom-line').span.text
                             dt = parse(day % str_time)
 
-                            date_local = self.convert_local_datetime(dt)
+                            date_utc = self._time_naive_site_to_utc_aware(dt)
+
+                            if self.get_setting('is_noold_item') and int(
+                                    (date_utc - self.time_now_utc()).total_seconds() / 60) < -180:
+                                continue
 
                             match = col.find('div', 'live-teams').text
 
-                            # Создаем хэш
-                            id = self.create_id(str(date_local) + match)
-
-                            # id_real.append(id)
+                            id_ = self.create_id(str(date_utc) + match)
 
                             league = col.find('div', 'broadcast-category').text
 
                             poster, thumb, fanart = self._picmake.create_football_poster(
-                                home_logo=self._site +
-                                col.find('div', 'home-logo').img['src'],
-                                away_logo=self._site +
-                                col.find('div', 'away-logo').img['src'],
-                                # home_logo=os.path.join(self._plugin.media(), 'home.png'),
-                                # away_logo=os.path.join(self._plugin.media(), 'away.png'),
-                                id=id, date_broadcast=date_local, match=match, league=league)
-
-                            # if id is not self._listing:
-                            #    self._listing[id] = {}
+                                home_logo=self._site + col.find('div', 'home-logo').img['src'],
+                                away_logo=self._site + col.find('div', 'away-logo').img['src'],
+                                id=id_, date_broadcast=self.time_to_local(date_utc), match=match, league=league)
 
                             self.logd(
-                                'parse_listing', 'ADD MATCH - %s - %s' % (date_local, match))
+                                'parse_listing', 'ADD MATCH - %s - %s' % (self.time_to_local(date_utc), match))
 
                             i += 2
                             if progress:
                                 progress.update(i, message=match)
 
-                            listing[id] = {}
-                            item = listing[id]
-                            item['id'] = id
-                            item['match'] = match
+                            listing[id_] = {}
+                            item = listing[id_]
+                            item['id'] = id_
+                            item['label'] = match
                             item['league'] = league
-                            item['date'] = date_local
+                            item['date'] = date_utc
                             item['thumb'] = thumb
                             item['icon'] = ''
                             item['poster'] = poster
                             item['fanart'] = fanart
-                            item['url_links'] = self._site + \
-                                col.find('div', 'live-teams').a['href']
+                            item['url_links'] = self._site + col.find('div', 'live-teams').a['href']
                             if 'href' not in item:
                                 item['href'] = []
 
@@ -179,8 +164,6 @@ class PimpleTV(Plugin):
         :param id:
         :return:
         """
-        item = self.item(id)
-
         l = []
 
         for link in links:
@@ -198,7 +181,7 @@ class PimpleTV(Plugin):
                 icon = os.path.join(self.dir('media'), 'http.png')
 
             l.append({'label': '%s - %s - %s' % (link['title'], link['kbps'], link['resol']),
-                      'info': {'video': {'title': item['match'], 'plot': plot}},
+                      'info': {'video': {'title': self.get(id, 'label'), 'plot': plot}},
                       'thumb': icon,
                       'icon': icon,
                       'fanart': '',
@@ -216,20 +199,19 @@ class PimpleTV(Plugin):
 
         listing = []
 
-        now_date = datetime.datetime.now().replace(tzinfo=tzlocal())
+        now_utc = self.time_now_utc()
 
-        self.logd('pimpletv._get_listing()', '%s' % now_date)
+        self.logd('pimpletv._get_listing()', '%s' % self.time_to_local(now_utc))
 
         try:
             for item in self._listing.values():
-                status = 'FFFFFFFF'
-                date_broadcast = item['date']
-                if date_broadcast > now_date:
-                    dt = date_broadcast - now_date
+                date_ = item['date']
+                if date_ > now_utc:
+                    dt = date_ - now_utc
                     plot = self.format_timedelta(dt, u'Через')
                     status = 'FFFFFFFF'
                 else:
-                    dt = now_date - date_broadcast
+                    dt = now_utc - date_
                     if int(dt.total_seconds() / 60) < 110:
                         plot = u'Прямой эфир %s мин.' % int(
                             dt.total_seconds() / 60)
@@ -239,29 +221,22 @@ class PimpleTV(Plugin):
                         status = 'FF999999'
 
                 title = u'[COLOR %s]%s[/COLOR]\n[B]%s[/B]\n[UPPERCASE]%s[/UPPERCASE]' % (
-                    status, date_broadcast.strftime('%d.%m %H:%M'), item['match'], item['league'])
+                    status, self.time_to_local(date_).strftime('%d.%m %H:%M'), item['label'], item['league'])
 
                 label = u'[COLOR %s]%s[/COLOR] - [B]%s[/B]' % (
-                    status, date_broadcast.strftime('%H:%M'), item['match'])
+                    status, self.time_to_local(date_).strftime('%H:%M'), item['label'])
+
                 plot = title + '\n' + plot + '\n\n' + self._site
 
-                is_folder = True
-                is_playable = False
-                get_url = self.get_url(action='links', id=item['id'])
+                href = ''
 
-                # Сразу воспроизводить ссылку по-умолчанию
                 if self.get_setting('is_play'):
-                    is_folder = False
-                    is_playable = True
-                    href = ''
-
                     for h in item['href']:
                         if h['title'] == self.get_setting('play_engine').decode('utf-8'):
                             href = h['href']
                             break
 
-                    get_url = self.get_url(
-                        action='play', href=href, id=item['id'])
+                is_folder, is_playable, get_url = self.geturl_isfolder_isplay(item['id'], href)
 
                 listing.append({
                     'label': label,
@@ -273,38 +248,16 @@ class PimpleTV(Plugin):
                     },
                     'info': {
                         'video': {
-                            # 'imdbnumber': ,
-                            # 'count': ,
-                            # 'cast': ,
-                            # 'dateadded': ,
-                            # 'director': ,
-                            # 'genre': ,
-                            # 'country': ,
-                            # 'year': '2019',
-                            # 'rating': ,
                             'plot': plot,
-                            # 'plotoutline': ,
                             'title': label,
-                            # 'sorttitle': ,
-                            # 'duration': ,
-                            # 'originaltitle': ,
-                            # 'premiered': ,
-                            # 'votes': ,
-                            # 'trailer': ,
-                            # 'mediatype': ,
-                            # 'tagline': ,
-                            # 'mpaa': ,
-                            # 'playcount': ,
                         }
                     },
                     'is_folder': is_folder,
                     'is_playable': is_playable,
                     'url': get_url,
-                    # 'context_menu': ,
-                    # 'online_db_ids':
                 })
 
         except Exception as e:
-            self.logd('pimpletv.matches() ERROR', '%s' % e)
+            self.logd('pimpletv._get_listing() ERROR', str(e))
 
         return listing
