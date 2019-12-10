@@ -201,7 +201,8 @@ class PimpleTV(Plugin):
 
         now_utc = self.time_now_utc()
 
-        self.logd('pimpletv._get_listing()', '%s' % self.time_to_local(now_utc))
+        self.logd('pimpletv._get_listing()', '%s' %
+                  self.time_to_local(now_utc))
 
         try:
             for item in self._listing.values():
@@ -236,7 +237,8 @@ class PimpleTV(Plugin):
                             href = h['href']
                             break
 
-                is_folder, is_playable, get_url = self.geturl_isfolder_isplay(item['id'], href)
+                is_folder, is_playable, get_url = self.geturl_isfolder_isplay(
+                    item['id'], href)
 
                 listing.append({
                     'label': label,

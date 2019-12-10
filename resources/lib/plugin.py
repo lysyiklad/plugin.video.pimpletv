@@ -132,15 +132,7 @@ class Plugin(simpleplugin.Plugin):
         ]
         """
         pass
-
-    @abstractmethod
-    def _get_listing(self):
-        pass
-
-    @abstractmethod
-    def _get_links(self, id, links):
-        pass
-
+   
     @property
     def date_scan(self):
         return self._date_scan
@@ -606,3 +598,5 @@ class Plugin(simpleplugin.Plugin):
             get_url = self.get_url(action='play', href=href, id=id)
 
         return is_folder, is_playable, get_url
+
+   
