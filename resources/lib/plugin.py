@@ -189,7 +189,7 @@ class Plugin(simpleplugin.Plugin):
         :return:
         """
         id = int(params['id'])
-        links = self.links(id)
+        links = self.links(id, isdump=True)
         self.logd('links', links)
 
         if not links:
@@ -203,7 +203,7 @@ class Plugin(simpleplugin.Plugin):
 
         return self._get_links(id, links)
 
-    def links(self, id):
+    def links(self, id, isdump=False):
         """
         Возвращает список ссылок кокретного элемента. При необходимости парсит по ссылке в элементе.
         :param id: id элемента
@@ -214,7 +214,10 @@ class Plugin(simpleplugin.Plugin):
         tsn = self._time_scan_now()
         dt = self.get_setting('delta_links')
 
-        if not links or not self.date_scan or (tsn > dt and tnd < dt) or tsn > self.get_setting('delta_scan'):
+        self.logd('links links', links)
+        self.logd('links self.date_scan', self.date_scan)
+
+        if not links or not self.date_scan or tsn > self.get_setting('delta_scan') or (tsn > dt and tnd < dt):
             self.logd('links - id - %s : time now date - %s time scan now - %s' %
                       (id, tnd, tsn), links)
             html = self.http_get(self.get(id, 'url_links'))
@@ -223,8 +226,8 @@ class Plugin(simpleplugin.Plugin):
                 return links
             del links[:]
             links.extend(self._parse_links(html))
-            # if links:
-            #     self.dump()
+            if links and isdump:
+                self.dump()
 
         self.logd('self.get(%s, href)' % id, self.get(id, 'href'))
 
@@ -291,7 +294,7 @@ class Plugin(simpleplugin.Plugin):
                 percent += i
                 progress.update(percent, '%s: cканирование ссылок' %
                                 self.name, val['label'])
-                self.links(val['id'])
+                self.links(val['id'], isdump=False)
 
         self.log('***** 4')
 
@@ -365,7 +368,7 @@ class Plugin(simpleplugin.Plugin):
         msg = ''
         self.logd('play', params)
         if 'href' not in params or not params['href']:
-            links = self.links(int(params['id']))
+            links = self.links(int(params['id']), isdump=True)
             self.logd('play links', links)
             for h in links:
                 if h['title'] == self.get_setting('play_engine').decode('utf-8'):
