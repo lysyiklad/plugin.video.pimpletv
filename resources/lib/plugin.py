@@ -132,7 +132,7 @@ class Plugin(simpleplugin.Plugin):
         ]
         """
         pass
-   
+
     @property
     def date_scan(self):
         return self._date_scan
@@ -308,7 +308,8 @@ class Plugin(simpleplugin.Plugin):
 
         self.log('***** 5')
 
-        self._listing = OrderedDict(sorted(self._listing.items(), key=lambda t: t[1]['date']))
+        self._listing = OrderedDict(
+            sorted(self._listing.items(), key=lambda t: t[1]['date']))
 
         self._date_scan = self.time_now_utc()
         self.dump()
@@ -599,4 +600,7 @@ class Plugin(simpleplugin.Plugin):
 
         return is_folder, is_playable, get_url
 
-   
+    def is_create_artwork(self):
+        if self.get_setting('is_thumb') or self.get_setting('is_fanart') or self.get_setting('is_poster'):
+            return True
+        return False

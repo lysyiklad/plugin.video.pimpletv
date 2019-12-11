@@ -8,8 +8,8 @@ from dateutil.parser import *
 # from collections import OrderedDict
 from urlparse import urlparse
 
-from .makepic import CreatePictures
 from .plugin import Plugin
+from . import makeart
 
 MONTHS = {u"января": u"January",
           u"февраля": u"February",
@@ -29,7 +29,11 @@ class PimpleTV(Plugin):
 
     def __init__(self):
         super(PimpleTV, self).__init__()
-        self._picmake = CreatePictures(self)
+        makeart.DIR_CONFIG = self.config_dir
+        makeart.DIR_ADDON = self.path
+        makeart.DIR_FONT = self.dir('font')
+        makeart.DIR_TARGET = self.dir('thumb')
+        makeart.DIR_MEDIA = self.dir('media')
 
     def _parse_listing(self, html, progress=None):
         """
@@ -95,10 +99,43 @@ class PimpleTV(Plugin):
 
                             league = col.find('div', 'broadcast-category').text
 
-                            poster, thumb, fanart = self._picmake.create_football_poster(
-                                home_logo=self._site + col.find('div', 'home-logo').img['src'],
-                                away_logo=self._site + col.find('div', 'away-logo').img['src'],
-                                id=id_, date_broadcast=self.time_to_local(date_utc), match=match, league=league)
+                            home = match.split(u'\u2014')[0].strip()
+                            away = match.split(u'\u2014')[1].strip()
+
+                            poster = ''
+                            thumb = ''
+                            fanart = self.fanart
+                            
+                            if self.is_create_artwork():
+                                art = makeart.ArtWorkFootBall(id=id_,
+                                                      date=date_utc,
+                                                      league=league,
+                                                      home=home,
+                                                      away=away,
+                                                      logo_home=self._site +
+                                                      col.find(
+                                                          'div', 'home-logo').img['src'],
+                                                      logo_away=self._site +
+                                                      col.find(
+                                                          'div', 'away-logo').img['src'],
+                                                      log=self.log)
+
+                                if self.get_setting('is_thumb'):
+                                    thumb = art.create_thumb()
+                                    self.log(thumb)
+                                if self.get_setting('is_fanart'):
+                                    fanart = art.create_fanart()
+                                    self.log(fanart)
+                                if self.get_setting('is_poster'):
+                                    poster = art.create_poster()
+                                    self.log(poster)                              
+
+
+
+                            # poster, thumb, fanart = self._picmake.create_football_poster(
+                            #     home_logo=self._site + col.find('div', 'home-logo').img['src'],
+                            #     away_logo=self._site + col.find('div', 'away-logo').img['src'],
+                            #     id=id_, date_broadcast=self.time_to_local(date_utc), match=match, league=league)
 
                             self.logd(
                                 'parse_listing', 'ADD MATCH - %s - %s' % (self.time_to_local(date_utc), match))
