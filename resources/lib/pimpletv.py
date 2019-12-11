@@ -104,20 +104,20 @@ class PimpleTV(Plugin):
                             poster = ''
                             thumb = ''
                             fanart = self.fanart
-                            
+
                             if self.is_create_artwork():
                                 art = makeart.ArtWorkFootBall(id=id_,
-                                                      date=date_utc,
-                                                      league=league,
-                                                      home=home,
-                                                      away=away,
-                                                      logo_home=self._site +
-                                                      col.find(
-                                                          'div', 'home-logo').img['src'],
-                                                      logo_away=self._site +
-                                                      col.find(
-                                                          'div', 'away-logo').img['src'],
-                                                      log=self.log)
+                                                                  date=date_utc,
+                                                                  league=league,
+                                                                  home=home,
+                                                                  away=away,
+                                                                  logo_home=self._site +
+                                                                  col.find(
+                                                                      'div', 'home-logo').img['src'],
+                                                                  logo_away=self._site +
+                                                                  col.find(
+                                                                      'div', 'away-logo').img['src'],
+                                                                  log=self.log)
 
                                 if self.get_setting('is_thumb'):
                                     thumb = art.create_thumb()
@@ -127,7 +127,7 @@ class PimpleTV(Plugin):
                                     self.log(fanart)
                                 if self.get_setting('is_poster'):
                                     poster = art.create_poster()
-                                    self.log(poster)                              
+                                    self.log(poster)
 
                             self.logd(
                                 'parse_listing', 'ADD MATCH - %s - %s' % (self.time_to_local(date_utc), match))
@@ -146,7 +146,8 @@ class PimpleTV(Plugin):
                             item['icon'] = ''
                             item['poster'] = poster
                             item['fanart'] = fanart
-                            item['url_links'] = self._site + col.find('div', 'live-teams').a['href']
+                            item['url_links'] = self._site + \
+                                col.find('div', 'live-teams').a['href']
                             if 'href' not in item:
                                 item['href'] = []
 
