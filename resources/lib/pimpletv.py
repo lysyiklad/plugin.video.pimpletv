@@ -5,7 +5,6 @@ import os
 
 import bs4
 from dateutil.parser import *
-# from collections import OrderedDict
 from urlparse import urlparse
 
 from .plugin import Plugin
@@ -129,13 +128,6 @@ class PimpleTV(Plugin):
                                 if self.get_setting('is_poster'):
                                     poster = art.create_poster()
                                     self.log(poster)                              
-
-
-
-                            # poster, thumb, fanart = self._picmake.create_football_poster(
-                            #     home_logo=self._site + col.find('div', 'home-logo').img['src'],
-                            #     away_logo=self._site + col.find('div', 'away-logo').img['src'],
-                            #     id=id_, date_broadcast=self.time_to_local(date_utc), match=match, league=league)
 
                             self.logd(
                                 'parse_listing', 'ADD MATCH - %s - %s' % (self.time_to_local(date_utc), match))
