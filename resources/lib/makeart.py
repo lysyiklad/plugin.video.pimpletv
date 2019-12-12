@@ -6,9 +6,6 @@ import io
 from PIL import Image, ImageDraw, ImageFont
 import datetime
 
-# import xbmc
-# import xbmcaddon
-
 # locale.setlocale(locale.LC_ALL, '')
 
 MAX_LENGTH_TEXT = 370
@@ -18,17 +15,6 @@ WEEKDAY = [u"Понедельник", u"Вторник", u"Среда",
 
 MONTHS = [u"января", u"февраля", u"марта", u"апреля", u"мая", u"июня", u"июля", u"августа",
           u"сентября", u"октября", u"ноября", u"декабря"]
-
-#__addon__ = xbmcaddon.Addon()
-DIR_CONFIG = '' #xbmc.translatePath(__addon__.getAddonInfo('profile')).decode('utf-8')
-
-DIR_ADDON = ''  #__addon__.getAddonInfo('path').decode('utf-8')
-DIR_FONT = '' 
-DIR_TARGET = ''
-DIR_MEDIA = '' 
-
-if DIR_TARGET and not os.path.exists(DIR_TARGET):
-    os.makedirs(DIR_TARGET)
 
 SIZE_FONT_LEAGUE = 45
 SIZE_FONT_COMMAND = 55
@@ -74,10 +60,6 @@ ARTWORK_DATA = {
         'pos_home': (100, 100),
         'pos_away': (460, 100), },
 }
-
-
-def font(file, size):
-    return ImageFont.truetype(os.path.join(DIR_FONT, file), size)
 
 
 def _cuttext(text, font, maxlength_text=MAX_LENGTH_TEXT):
@@ -136,13 +118,17 @@ def _open_url_image(url):
 
 class ArtWorkFootBall(object):
 
-    def __init__(self, **kwargs):
+    def __init__(self, plugin, **kwargs):
+        self._plugin = plugin
         self._data = kwargs
-        #assert(DIR_CONFIG)        
 
     def log(self, msg):
-        if self._data['log']:
-            self._data['log'](msg)
+        if self._plugin:
+            self._plugin.logd('ArtWorkFootBall', msg)
+
+    @property
+    def plugin(self):
+        return self._plugin
 
     @property
     def league(self):
@@ -173,16 +159,20 @@ class ArtWorkFootBall(object):
         return self._data['logo_away']
 
     def file(self, type):
-        return os.path.join(DIR_TARGET, '%s_%s.png' % (type, str(self._data['id'])))
+        return os.path.join(self.plugin.dir('thumb'), '%s_%s.png' % (type, str(self._data['id'])))
+
+    def font(self, file, size):
+        return ImageFont.truetype(os.path.join(self.plugin.dir('font'), file), size)
 
     def _paste_logo(self, type, ifon):
         try:
             ihome = _open_url_image(self.logo_home)
             iaway = _open_url_image(self.logo_away)
         except Exception as e:
-            self.log('ERROR PASTE LOGO [%s] - %s - %s' % (e, self.logo_home, self.logo_away))
-            ihome = Image.open(os.path.join(DIR_MEDIA, 'home.png'))
-            iaway = Image.open(os.path.join(DIR_MEDIA, 'away.png'))
+            self.log('ERROR PASTE LOGO [%s] - %s - %s' %
+                     (e, self.logo_home, self.logo_away))
+            ihome = Image.open(self.plugin.icon)
+            iaway = Image.open(self.plugin.icon)
             # ic2.thumbnail(ARTWORK_DATA[type]['size_thumbaway'], Image.ANTIALIAS)
         ihome = ihome.convert("RGBA")
         iaway = iaway.convert("RGBA")
@@ -195,21 +185,29 @@ class ArtWorkFootBall(object):
 
         file = self.file(type)
         if os.path.exists(file):
+            self.log('exists -%s' % file)
             return file
         try:
 
-            ifon = Image.open(os.path.join(DIR_MEDIA, 'fon_%s.png' % type))
+            ifon = Image.open(os.path.join(
+                self.plugin.dir('media'), 'fon_%s.png' % type))
             ifon = ifon.convert("RGBA")
             draw = ImageDraw.Draw(ifon)
 
-            _draw_text(draw, self.league, font('ubuntu_condensed', SIZE_FONT_LEAGUE), ARTWORK_DATA[type]['league'])
-            _draw_text(draw, self._data['home'], font('bandera_pro', SIZE_FONT_COMMAND), ARTWORK_DATA[type]['com_home'])
-            _draw_text(draw, self.vs, font('ubuntu',
-                                           SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['vs'])
-            _draw_text(draw, self._data['away'], font('bandera_pro', SIZE_FONT_COMMAND), ARTWORK_DATA[type]['com_away'])
-            _draw_text(draw, self.weekday, font('ubuntu', SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['weekday'])
-            _draw_text(draw, self.month, font('ubuntu', SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['month'])
-            _draw_text(draw, self.time, font('bandera_pro', SIZE_FONT_TIME), ARTWORK_DATA[type]['time'])
+            _draw_text(draw, self.league, self.font(
+                'ubuntu_condensed', SIZE_FONT_LEAGUE), ARTWORK_DATA[type]['league'])
+            _draw_text(draw, self._data['home'], self.font(
+                'bandera_pro', SIZE_FONT_COMMAND), ARTWORK_DATA[type]['com_home'])
+            _draw_text(draw, self.vs, self.font('ubuntu',
+                                                SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['vs'])
+            _draw_text(draw, self._data['away'], self.font(
+                'bandera_pro', SIZE_FONT_COMMAND), ARTWORK_DATA[type]['com_away'])
+            _draw_text(draw, self.weekday, self.font(
+                'ubuntu', SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['weekday'])
+            _draw_text(draw, self.month, self.font(
+                'ubuntu', SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['month'])
+            _draw_text(draw, self.time, self.font('bandera_pro',
+                                                  SIZE_FONT_TIME), ARTWORK_DATA[type]['time'])
 
             self._paste_logo(type, ifon)
 
@@ -227,4 +225,3 @@ class ArtWorkFootBall(object):
 
     def create_fanart(self):
         return self._create_art('fanart')
-

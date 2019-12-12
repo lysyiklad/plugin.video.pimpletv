@@ -49,5 +49,5 @@ if __name__ == "__main__":
             plugin.log('START SERVICE!')
             plugin.update()
             plugin.log('STOP SERVICE!')
-        if monitor.waitForAbort(plugin.get_setting('delta_scan') * 60):
+        if monitor.waitForAbort(plugin.get_setting('scan_service') * 60):
             break

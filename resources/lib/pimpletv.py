@@ -28,11 +28,6 @@ class PimpleTV(Plugin):
 
     def __init__(self):
         super(PimpleTV, self).__init__()
-        makeart.DIR_CONFIG = self.config_dir
-        makeart.DIR_ADDON = self.path
-        makeart.DIR_FONT = self.dir('font')
-        makeart.DIR_TARGET = self.dir('thumb')
-        makeart.DIR_MEDIA = self.dir('media')
 
     def _parse_listing(self, html, progress=None):
         """
@@ -106,28 +101,28 @@ class PimpleTV(Plugin):
                             fanart = self.fanart
 
                             if self.is_create_artwork():
-                                art = makeart.ArtWorkFootBall(id=id_,
-                                                                  date=date_utc,
-                                                                  league=league,
-                                                                  home=home,
-                                                                  away=away,
-                                                                  logo_home=self._site +
-                                                                  col.find(
-                                                                      'div', 'home-logo').img['src'],
-                                                                  logo_away=self._site +
-                                                                  col.find(
-                                                                      'div', 'away-logo').img['src'],
-                                                                  log=self.log)
+                                art = makeart.ArtWorkFootBall(self,
+                                                              id=id_,
+                                                              date=date_utc,
+                                                              league=league,
+                                                              home=home,
+                                                              away=away,
+                                                              logo_home=self._site +
+                                                              col.find(
+                                                                  'div', 'home-logo').img['src'],
+                                                              logo_away=self._site +
+                                                              col.find(
+                                                                  'div', 'away-logo').img['src'])
 
                                 if self.get_setting('is_thumb'):
                                     thumb = art.create_thumb()
-                                    self.log(thumb)
+                                    self.logd('_parse_listing', thumb)
                                 if self.get_setting('is_fanart'):
                                     fanart = art.create_fanart()
-                                    self.log(fanart)
+                                    self.logd('_parse_listing', fanart)
                                 if self.get_setting('is_poster'):
                                     poster = art.create_poster()
-                                    self.log(poster)
+                                    self.logd('_parse_listing', poster)
 
                             self.logd(
                                 'parse_listing', 'ADD MATCH - %s - %s' % (self.time_to_local(date_utc), match))
