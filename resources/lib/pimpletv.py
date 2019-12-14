@@ -103,7 +103,7 @@ class PimpleTV(Plugin):
                             if self.is_create_artwork():
                                 art = makeart.ArtWorkFootBall(self,
                                                               id=id_,
-                                                              date=date_utc,
+                                                              date=self.time_to_local(date_utc),
                                                               league=league,
                                                               home=home,
                                                               away=away,
