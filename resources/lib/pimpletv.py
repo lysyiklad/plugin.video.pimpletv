@@ -201,12 +201,12 @@ class PimpleTV(Plugin):
                 icon = os.path.join(self.dir('media'), 'ace.png')
             elif urlprs.scheme == 'sop':
                 icon = os.path.join(self.dir('media'), 'sop.png')
-                plot = '\n\n\nДля просмотра SopCast необходим плагин Plexus'
+                plot = u'\n\nДля просмотра SopCast необходим плагин Plexus'
             else:
                 icon = os.path.join(self.dir('media'), 'http.png')
 
             l.append({'label': '%s - %s - %s' % (link['title'], link['kbps'], link['resol']),
-                      'info': {'video': {'title': self.get(id, 'label'), 'plot': plot}},
+                      'info': {'video': {'title': self.get(id, 'label'), 'plot': self.get(id, 'label') + plot}},
                       'thumb': icon,
                       'icon': icon,
                       'fanart': '',
