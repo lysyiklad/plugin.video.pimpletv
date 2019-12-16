@@ -79,14 +79,6 @@ def _get_indent_left_for_center(text, width_frame, font):
     return (width_frame - w) / 2
 
 
-def _draw_text(draw, text, font, padding_top):
-    if padding_top is None:
-        return
-    width_bkg = draw.im.size[0]
-    text = _cuttext(text, font)
-    draw.text((_get_indent_left_for_center(text, width_bkg, font),
-               padding_top), text, (0, 0, 0), font=font)
-
 
 def _http_get_image(url):
     """
@@ -121,6 +113,9 @@ class ArtWorkFootBall(object):
     def __init__(self, plugin, **kwargs):
         self._plugin = plugin
         self._data = kwargs
+        self.color_font = (0, 0, 0)
+        # dark light transparent
+        self._theme = 'light'
 
     def log(self, msg):
         if self._plugin:
@@ -164,6 +159,19 @@ class ArtWorkFootBall(object):
     def font(self, file, size):
         return ImageFont.truetype(os.path.join(self.plugin.dir('font'), file), size)
 
+    @property
+    def theme(self):
+        return self._theme
+   
+
+    def _draw_text(self, draw, text, font, padding_top):
+        if padding_top is None:
+            return
+        width_bkg = draw.im.size[0]
+        text = _cuttext(text, font)
+        draw.text((_get_indent_left_for_center(text, width_bkg, font),
+                padding_top), text, self.color_font, font=font)
+
     def _paste_logo(self, type, ifon):
         try:
             ihome = _open_url_image(self.logo_home)
@@ -190,23 +198,23 @@ class ArtWorkFootBall(object):
         try:
 
             ifon = Image.open(os.path.join(
-                self.plugin.dir('media'), 'fon_%s.png' % type))
+                self.plugin.dir('media'), 'fon_%s%s.png' % (self.theme, type)))
             ifon = ifon.convert("RGBA")
             draw = ImageDraw.Draw(ifon)
 
-            _draw_text(draw, self.league, self.font(
+            self._draw_text(draw, self.league, self.font(
                 'ubuntu_condensed', SIZE_FONT_LEAGUE), ARTWORK_DATA[type]['league'])
-            _draw_text(draw, self._data['home'], self.font(
+            self._draw_text(draw, self._data['home'], self.font(
                 'bandera_pro', SIZE_FONT_COMMAND), ARTWORK_DATA[type]['com_home'])
-            _draw_text(draw, self.vs, self.font('ubuntu',
+            self._draw_text(draw, self.vs, self.font('ubuntu',
                                                 SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['vs'])
-            _draw_text(draw, self._data['away'], self.font(
+            self._draw_text(draw, self._data['away'], self.font(
                 'bandera_pro', SIZE_FONT_COMMAND), ARTWORK_DATA[type]['com_away'])
-            _draw_text(draw, self.weekday, self.font(
+            self._draw_text(draw, self.weekday, self.font(
                 'ubuntu', SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['weekday'])
-            _draw_text(draw, self.month, self.font(
+            self._draw_text(draw, self.month, self.font(
                 'ubuntu', SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['month'])
-            _draw_text(draw, self.time, self.font('bandera_pro',
+            self._draw_text(draw, self.time, self.font('bandera_pro',
                                                   SIZE_FONT_TIME), ARTWORK_DATA[type]['time'])
 
             self._paste_logo(type, ifon)
@@ -224,4 +232,20 @@ class ArtWorkFootBall(object):
         return self._create_art('thumb')
 
     def create_fanart(self):
-        return self._create_art('fanart')
+        theme = self._theme
+        self._theme = ''
+        fanart =  self._create_art('fanart')
+        self._theme = theme
+        return fanart
+
+    def set_dark_theme(self):
+        self._theme = 'dark'
+        self.color_font = (255, 255, 255)
+
+    def set_light_theme(self):
+        self._theme = 'light'
+        self.color_font = (0, 0, 0)
+
+    def set_transparent_theme(self):
+        self._theme = 'transparent'
+        self.color_font = (255, 255, 255)

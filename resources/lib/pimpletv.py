@@ -103,7 +103,8 @@ class PimpleTV(Plugin):
                             if self.is_create_artwork():
                                 art = makeart.ArtWorkFootBall(self,
                                                               id=id_,
-                                                              date=self.time_to_local(date_utc),
+                                                              date=self.time_to_local(
+                                                                  date_utc),
                                                               league=league,
                                                               home=home,
                                                               away=away,
@@ -113,6 +114,16 @@ class PimpleTV(Plugin):
                                                               logo_away=self._site +
                                                               col.find(
                                                                   'div', 'away-logo').img['src'])
+
+                                if self.get_setting('theme_artwork') == 0:
+                                    art.set_light_theme()
+                                elif self.get_setting('theme_artwork') == 1:
+                                    art.set_dark_theme()
+                                elif self.get_setting('theme_artwork') == 2:
+                                    art.set_transparent_theme()
+                                else:
+                                    self.logd('_parse_listing', 'error set artwork theme')
+                                    art.set_light_theme()
 
                                 if self.get_setting('is_thumb'):
                                     thumb = art.create_thumb()
@@ -215,6 +226,7 @@ class PimpleTV(Plugin):
                       'is_playable': True})
 
         return l
+
 
     def _get_listing(self):
         """

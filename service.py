@@ -19,6 +19,7 @@ SETTING_UPDATE = [
     'is_play',
     'is_pars_links',
     'is_noold_item',
+    'theme_artwork',
 ]
 
 class Monitor(xbmc.Monitor):
@@ -37,7 +38,10 @@ class Monitor(xbmc.Monitor):
         super(Monitor, self).onSettingsChanged()
         new_settings = self._get_settings()
         if new_settings != self._settings:
-            plugin.on_settings_changed()
+            if new_settings['theme_artwork'] != self._settings['theme_artwork']:
+                plugin.reset()
+            else:
+                plugin.on_settings_changed()
             self._settings = new_settings
             xbmc.executebuiltin('Container.Refresh()')
 
