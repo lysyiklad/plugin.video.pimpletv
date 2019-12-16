@@ -11,7 +11,7 @@
 		<setting id="reset" option="close" type="action" label="Полное обновление данных" action="RunPlugin(plugin://plugin.video.pimpletv?action=reset)" />
 	</category>
 	<category label="Парсинг">
-		<setting id="theme_artwork" label="Тема artwork" type="enum"  values="Светлая|Темная|Прозрачная"/>
+		<setting id="theme_artwork" label="Тема artwork" type="enum"  values="Светлая|Темная|Голубая|Прозрачная"/>
 		<setting id="is_poster" type="bool" label="Создавать постеры" default="false" visible="true"/>
 		<setting id="is_thumb" type="bool" label="Создавать миниатюры" default="false" visible="true"/>
 		<setting id="is_fanart" type="bool" label="Создавать фанарты" default="false" visible="true"/>

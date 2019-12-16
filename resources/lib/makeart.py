@@ -56,7 +56,7 @@ ARTWORK_DATA = {
         'weekday': None,
         'month': None,
         'time': None,
-        'size': (300, 300),
+        'size': (250, 250),
         'pos_home': (100, 100),
         'pos_away': (460, 100), },
 }
@@ -248,4 +248,8 @@ class ArtWorkFootBall(object):
 
     def set_transparent_theme(self):
         self._theme = 'transparent'
+        self.color_font = (255, 255, 255)
+
+    def set_blue_theme(self):
+        self._theme = 'blue'
         self.color_font = (255, 255, 255)

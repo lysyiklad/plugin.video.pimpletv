@@ -115,14 +115,20 @@ class PimpleTV(Plugin):
                                                               col.find(
                                                                   'div', 'away-logo').img['src'])
 
-                                if self.get_setting('theme_artwork') == 0:
+                                theme_artwork = self.get_setting(
+                                    'theme_artwork')
+
+                                if theme_artwork == 0:
                                     art.set_light_theme()
-                                elif self.get_setting('theme_artwork') == 1:
+                                elif theme_artwork == 1:
                                     art.set_dark_theme()
-                                elif self.get_setting('theme_artwork') == 2:
+                                elif theme_artwork == 2:
+                                    art.set_blue_theme()
+                                elif theme_artwork == 3:
                                     art.set_transparent_theme()
                                 else:
-                                    self.logd('_parse_listing', 'error set artwork theme')
+                                    self.logd('_parse_listing',
+                                              'error set artwork theme')
                                     art.set_light_theme()
 
                                 if self.get_setting('is_thumb'):
@@ -226,7 +232,6 @@ class PimpleTV(Plugin):
                       'is_playable': True})
 
         return l
-
 
     def _get_listing(self):
         """

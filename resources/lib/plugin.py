@@ -423,7 +423,8 @@ class Plugin(simpleplugin.Plugin):
                             progress.update(i*3, msg)
 
                     if i == 30:
-                        xbmcgui.Dialog().notification(self.name, 'STOP ACESTREAM', self.icon, 500)
+                        xbmcgui.Dialog().notification(
+                            self.name, 'Torrent not available or invalid!', self.icon, 500)
                         self.http_get(stop_url)
 
                     progress.close()
