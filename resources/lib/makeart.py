@@ -5,6 +5,7 @@ import urllib2
 import io
 from PIL import Image, ImageDraw, ImageFont
 import datetime
+from collections import namedtuple
 
 # locale.setlocale(locale.LC_ALL, '')
 
@@ -16,49 +17,27 @@ WEEKDAY = [u"Понедельник", u"Вторник", u"Среда",
 MONTHS = [u"января", u"февраля", u"марта", u"апреля", u"мая", u"июня", u"июля", u"августа",
           u"сентября", u"октября", u"ноября", u"декабря"]
 
-SIZE_FONT_LEAGUE = 45
-SIZE_FONT_COMMAND = 55
-SIZE_FONT_TIME = 60
-SIZE_FONT_WEEKDAY = 35
-
-SIZE_FONT_LARGE1 = 50
+SPECIFIC_ARTWORK_DATA = namedtuple('SPECIFIC_ARTWORK_DATA', [
+    'league',
+    'com_home',
+    'vs',
+    'com_away',
+    'weekday',
+    'month',
+    'time',
+    'size',
+    'pos_home',
+    'pos_away',
+    'size_font_league',
+    'size_font_command',
+    'size_font_time',
+    'size_font_weekday',
+])
 
 ARTWORK_DATA = {
-    'poster': {
-        'league': 25,
-        'com_home': 300,
-        'vs': 365,
-        'com_away': 410,
-        'weekday': 530,
-        'month': 575,
-        'time': 645,
-        'size': (150, 150),
-        'pos_home': (50, 100),
-        'pos_away': (270, 100), },
-
-    'thumb': {
-        'league': 10,
-        'com_home': 220,
-        'vs': None,
-        'com_away': 280,
-        'weekday': 335,
-        'month': 380,
-        'time': 420,
-        'size': (150, 150),
-        'pos_home': (50, 60),
-        'pos_away': (270, 60), },
-
-    'fanart': {
-        'league': None,
-        'com_home': None,
-        'vs': None,
-        'com_away': None,
-        'weekday': None,
-        'month': None,
-        'time': None,
-        'size': (250, 250),
-        'pos_home': (100, 100),
-        'pos_away': (460, 100), },
+    'poster': SPECIFIC_ARTWORK_DATA(25, 300, 365, 410, 530, 575, 645, (150, 150), (50, 100), (270, 100), 40, 55, 60, 35),
+    'thumb': SPECIFIC_ARTWORK_DATA(10, 220, None, 280, 335, 380, 420, (120, 120), (70, 80), (290, 80), 25, 40, 55, 35),
+    'fanart': SPECIFIC_ARTWORK_DATA(None, None, None, None, None, None, None, (250, 250), (100, 100), (460, 100), 0, 0, 0, 0),
 }
 
 
@@ -77,7 +56,6 @@ def _cuttext(text, font, maxlength_text=MAX_LENGTH_TEXT):
 def _get_indent_left_for_center(text, width_frame, font):
     w, h = font.getsize(text)
     return (width_frame - w) / 2
-
 
 
 def _http_get_image(url):
@@ -162,7 +140,6 @@ class ArtWorkFootBall(object):
     @property
     def theme(self):
         return self._theme
-   
 
     def _draw_text(self, draw, text, font, padding_top):
         if padding_top is None:
@@ -170,7 +147,7 @@ class ArtWorkFootBall(object):
         width_bkg = draw.im.size[0]
         text = _cuttext(text, font)
         draw.text((_get_indent_left_for_center(text, width_bkg, font),
-                padding_top), text, self.color_font, font=font)
+                   padding_top), text, self.color_font, font=font)
 
     def _paste_logo(self, type, ifon):
         try:
@@ -184,10 +161,11 @@ class ArtWorkFootBall(object):
             # ic2.thumbnail(ARTWORK_DATA[type]['size_thumbaway'], Image.ANTIALIAS)
         ihome = ihome.convert("RGBA")
         iaway = iaway.convert("RGBA")
-        ihome = ihome.resize(ARTWORK_DATA[type]['size'], Image.ANTIALIAS)
-        iaway = iaway.resize(ARTWORK_DATA[type]['size'], Image.ANTIALIAS)
-        ifon.paste(ihome, ARTWORK_DATA[type]['pos_home'], ihome)
-        ifon.paste(iaway, ARTWORK_DATA[type]['pos_away'], iaway)
+        art = ARTWORK_DATA[type]
+        ihome = ihome.resize(art.size, Image.ANTIALIAS)
+        iaway = iaway.resize(art.size, Image.ANTIALIAS)
+        ifon.paste(ihome, art.pos_home, ihome)
+        ifon.paste(iaway, art.pos_away, iaway)
 
     def _create_art(self, type):
 
@@ -202,20 +180,22 @@ class ArtWorkFootBall(object):
             ifon = ifon.convert("RGBA")
             draw = ImageDraw.Draw(ifon)
 
+            art = ARTWORK_DATA[type]
+
             self._draw_text(draw, self.league, self.font(
-                'ubuntu_condensed', SIZE_FONT_LEAGUE), ARTWORK_DATA[type]['league'])
+                'ubuntu_condensed', art.size_font_league), art.league)
             self._draw_text(draw, self._data['home'], self.font(
-                'bandera_pro', SIZE_FONT_COMMAND), ARTWORK_DATA[type]['com_home'])
-            self._draw_text(draw, self.vs, self.font('ubuntu',
-                                                SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['vs'])
+                'bandera_pro', art.size_font_command), art.com_home)
+            self._draw_text(draw, self.vs, self.font(
+                'ubuntu', art.size_font_weekday), art.vs)
             self._draw_text(draw, self._data['away'], self.font(
-                'bandera_pro', SIZE_FONT_COMMAND), ARTWORK_DATA[type]['com_away'])
+                'bandera_pro', art.size_font_command), art.com_away)
             self._draw_text(draw, self.weekday, self.font(
-                'ubuntu', SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['weekday'])
+                'ubuntu', art.size_font_weekday), art.weekday)
             self._draw_text(draw, self.month, self.font(
-                'ubuntu', SIZE_FONT_WEEKDAY), ARTWORK_DATA[type]['month'])
-            self._draw_text(draw, self.time, self.font('bandera_pro',
-                                                  SIZE_FONT_TIME), ARTWORK_DATA[type]['time'])
+                'ubuntu', art.size_font_weekday), art.month)
+            self._draw_text(draw, self.time, self.font(
+                'bandera_pro', art.size_font_time), art.time)
 
             self._paste_logo(type, ifon)
 
@@ -234,7 +214,7 @@ class ArtWorkFootBall(object):
     def create_fanart(self):
         theme = self._theme
         self._theme = ''
-        fanart =  self._create_art('fanart')
+        fanart = self._create_art('fanart')
         self._theme = theme
         return fanart
 
