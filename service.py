@@ -2,7 +2,7 @@
 
 import os
 import xbmc
-import xbmcgui
+#import xbmcgui
 # import xbmcaddon
 
 
@@ -49,9 +49,10 @@ class Monitor(xbmc.Monitor):
 if __name__ == "__main__":
     monitor = Monitor()
     while not monitor.abortRequested():
-        if not xbmc.Player().isPlaying():
-            plugin.log('START SERVICE!')
-            plugin.update()
-            plugin.log('STOP SERVICE!')
+        if plugin.get_setting('is_update_service'):
+            if not xbmc.Player().isPlaying():
+                plugin.log('START SERVICE!')
+                plugin.update()
+                plugin.log('STOP SERVICE!')
         if monitor.waitForAbort(plugin.get_setting('scan_service') * 60):
             break
