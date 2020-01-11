@@ -1,0 +1,303 @@
+# Kodi Media Center language file
+# Addon Name: LiveSport
+# Addon id: plugin.video.livesport
+# Addon Provider: lysyi
+
+msgid ""
+msgstr ""
+
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+
+msgctxt "#10000"
+msgid "Site time zone"
+msgstr ""
+
+msgctxt "#10001"
+msgid "Do not show offline matches in categories"
+msgstr ""
+
+msgctxt "#10002"
+msgid "Create thumbnails"
+msgstr ""
+
+msgctxt "#10003"
+msgid "Data update period, min."
+msgstr ""
+
+msgctxt "#10004"
+msgid "Service settings"
+msgstr ""
+
+msgctxt "#10005"
+msgid "For the service settings to take effect, you must restart Kodi !"
+msgstr ""
+
+msgctxt "#10006"
+msgid "Enable background data refresh"
+msgstr ""
+
+msgctxt "#10007"
+msgid "Update period in the background, min."
+msgstr ""
+
+msgctxt "#10008"
+msgid "Use the default AceStream playback method"
+msgstr ""
+
+msgctxt "#10009"
+msgid "AceStream default playback method"
+msgstr ""
+
+msgctxt "#10010"
+msgid "Data update links, min."
+msgstr ""
+
+msgctxt "#10011"
+msgid "Scan http links"
+msgstr ""
+
+msgctxt "#10012"
+msgid "Basic"
+msgstr ""
+
+msgctxt "#10013"
+msgid "Theme artwork"
+msgstr ""
+
+msgctxt "#10014"
+msgid "Light|Dark|Blue|Transparent"
+msgstr ""
+
+msgctxt "#10015"
+msgid "Create poster"
+msgstr ""
+
+msgctxt "#10016"
+msgid "Create fanart"
+msgstr ""
+
+msgctxt "#10017"
+msgid "Light"
+msgstr ""
+
+msgctxt "#10018"
+msgid "Dark"
+msgstr ""
+
+msgctxt "#10019"
+msgid "Blue"
+msgstr ""
+
+msgctxt "#10020"
+msgid "Transparent"
+msgstr ""
+
+msgctxt "#10021"
+msgid "Add-on settings..."
+msgstr ""
+
+msgctxt "#10022"
+msgid "Information in the window full screen video"
+msgstr ""
+
+msgctxt "#10023"
+msgid "Show live matches"
+msgstr ""
+
+msgctxt "#10024"
+msgid "Show game review"
+msgstr ""
+
+msgctxt "#10025"
+msgid "Show game statistics"
+msgstr ""
+
+msgctxt "#10026"
+msgid "Default directory"
+msgstr ""
+
+msgctxt "#10027"
+msgid "Main menu"
+msgstr ""
+
+
+
+
+
+
+
+
+
+msgctxt "#30000"
+msgid "All"
+msgstr ""
+
+msgctxt "#30001"
+msgid "Football"
+msgstr ""
+
+msgctxt "#30002"
+msgid "Ice Hockey"
+msgstr ""
+
+msgctxt "#30003"
+msgid "Basketball"
+msgstr ""
+
+msgctxt "#30004"
+msgid "Tennis"
+msgstr ""
+
+msgctxt "#30005"
+msgid "American Football"
+msgstr ""
+
+msgctxt "#30006"
+msgid "Race"
+msgstr ""
+
+msgctxt "#30007"
+msgid "Boxing"
+msgstr ""
+
+msgctxt "#30008"
+msgid "MMA"
+msgstr ""
+
+msgctxt "#30009"
+msgid "Live"
+msgstr ""
+
+msgctxt "#30010"
+msgid "Offline"
+msgstr ""
+
+msgctxt "#30011"
+msgid "Leagues Choice..."
+msgstr ""
+
+msgctxt "#30012"
+msgid "Refresh"
+msgstr ""
+
+msgctxt "#30013"
+msgid "UPDATE DATA ..."
+msgstr ""
+
+msgctxt "#30014"
+msgid "Loading site data ..."
+msgstr ""
+
+msgctxt "#30015"
+msgid "Changing settings ..."
+msgstr ""
+
+msgctxt "#30016"
+msgid "Stream information will be available 30 minutes prior to the begining of an event."
+msgstr ""
+
+msgctxt "#30017"
+msgid "link scanning"
+msgstr ""
+
+msgctxt "#30018"
+msgid "End update..."
+msgstr ""
+
+msgctxt "#30019"
+msgid "Resource Unavailable or Invalid!"
+msgstr ""
+
+msgctxt "#30020"
+msgid "Torrent not available or invalid!"
+msgstr ""
+
+msgctxt "#30021"
+msgid "wait..."
+msgstr ""
+
+msgctxt "#30022"
+msgid "playback..."
+msgstr ""
+
+msgctxt "#30023"
+msgid "prebuffering..."
+msgstr ""
+
+msgctxt "#30024"
+msgid "Plugin data reset..."
+msgstr ""
+
+msgctxt "#30025"
+msgid "Choosing a Sports Tournament"
+msgstr ""
+
+msgctxt "#30026"
+msgid "Plexus plugin required to view SopCast"
+msgstr ""
+
+msgctxt "#30027"
+msgid "After"
+msgstr ""
+
+msgctxt "#30028"
+msgid "STATISTICS:"
+msgstr ""
+
+msgctxt "#30029"
+msgid "BROADCASTS:"
+msgstr ""
+
+msgctxt "#30030"
+msgid "REVIEWS:"
+msgstr ""
+
+msgctxt "#30031"
+msgid "GOAL"
+msgstr ""
+
+msgctxt "#30032"
+msgid "card"
+msgstr ""
+
+msgctxt "#30033"
+msgid "came"
+msgstr ""
+
+msgctxt "#30034"
+msgid "gone"
+msgstr ""
+
+msgctxt "#30035"
+msgid "AUTOGOAL"
+msgstr ""
+
+msgctxt "#30036"
+msgid "direct link to broadcast"
+msgstr ""
+
+msgctxt "#30037"
+msgid "Updating Lists"
+msgstr ""
+
+msgctxt "#30038"
+msgid "Show date in list item"
+msgstr ""
+
+msgctxt "#30039"
+msgid "Show tournament in list item"
+msgstr ""
+
+msgctxt "#30040"
+msgid "Extra"
+msgstr ""
+
+msgctxt "#30041"
+msgid "Select leagues to create ArtWork..."
+msgstr ""
+
+msgctxt "#30042"
+msgid "Completed"
+msgstr ""

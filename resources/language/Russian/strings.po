@@ -1,0 +1,295 @@
+# Kodi Media Center language file
+# Addon Name: LiveSport
+# Addon id: plugin.video.livesport
+# Addon Provider: lysyi
+
+msgid ""
+msgstr ""
+
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ru\n"
+
+msgctxt "#10000"
+msgid "Site time zone"
+msgstr "Часовой пояс сайта"
+
+msgctxt "#10001"
+msgid "Do not show offline matches in categories"
+msgstr "Не показывать в категориях прошедшие матчи"
+
+msgctxt "#10002"
+msgid "Create thumbnails"
+msgstr "Создавать миниатюры"
+
+msgctxt "#10003"
+msgid "Data update period, min."
+msgstr "Период обновления данных, мин."
+
+msgctxt "#10004"
+msgid "Service settings"
+msgstr "Настройки службы"
+
+msgctxt "#10005"
+msgid "For the service settings to take effect, you must restart Kodi !"
+msgstr "Чтобы настройки службы вступили в силу, необходимо перезапустить Kodi!"
+
+msgctxt "#10006"
+msgid "Enable background data refresh"
+msgstr "Включить обновление данных в фоновом режиме"
+
+msgctxt "#10007"
+msgid "Update period in the background, min."
+msgstr "Период обновления в фоновом режиме, мин."
+
+msgctxt "#10008"
+msgid "Use the default AceStream playback method"
+msgstr "Использовать по-умолчанию способ AceStream"
+
+msgctxt "#10009"
+msgid "AceStream default playback method"
+msgstr "Способ AceStream по-умолчанию"
+
+msgctxt "#10010"
+msgid "Data update links, min."
+msgstr "Период обновления ссылок, мин."
+
+msgctxt "#10011"
+msgid "Scan http links"
+msgstr "Сканировать http ссылки"
+
+msgctxt "#10012"
+msgid "Basic"
+msgstr "Основные"
+
+msgctxt "#10013"
+msgid "Theme artwork"
+msgstr "Тема artwork"
+
+
+msgctxt "#10015"
+msgid "Create poster"
+msgstr "Создавать постеры"
+
+msgctxt "#10016"
+msgid "Create fanart"
+msgstr "Создать фанарты"
+
+msgctxt "#10017"
+msgid "Light"
+msgstr "Светлая"
+
+msgctxt "#10018"
+msgid "Dark"
+msgstr "Темная"
+
+msgctxt "#10019"
+msgid "Blue"
+msgstr "Голубая"
+
+msgctxt "#10020"
+msgid "Transparent"
+msgstr "Прозрачная"
+
+msgctxt "#10021"
+msgid "Add-on settings..."
+msgstr "Настройки плагина..."
+
+msgctxt "#10022"
+msgid "Information in the window full screen video"
+msgstr "Информация во время воспроизведения видео"
+
+msgctxt "#10023"
+msgid "Show live matches"
+msgstr "Показывать результаты матчей в прямом эфире"
+
+msgctxt "#10024"
+msgid "Show game review"
+msgstr "Показывать обзор игры"
+
+msgctxt "#10025"
+msgid "Show game statistics"
+msgstr "Показывать статистику игры"
+
+msgctxt "#10026"
+msgid "Default directory"
+msgstr "Каталог по-умолчанию"
+
+msgctxt "#10027"
+msgid "Main menu"
+msgstr "Главное меню"
+
+
+
+
+msgctxt "#30000"
+msgid "All"
+msgstr "Все"
+
+msgctxt "#30001"
+msgid "Football"
+msgstr "Футбол"
+
+msgctxt "#30002"
+msgid "Ice Hockey"
+msgstr "Хоккей"
+
+msgctxt "#30003"
+msgid "Basketball"
+msgstr "Баскетбол"
+
+msgctxt "#30004"
+msgid "Tennis"
+msgstr "Теннис"
+
+msgctxt "#30005"
+msgid "American Football"
+msgstr "Американский футбол"
+
+msgctxt "#30006"
+msgid "Race"
+msgstr "Гонки"
+
+msgctxt "#30007"
+msgid "Boxing"
+msgstr "Бокс"
+
+msgctxt "#30008"
+msgid "MMA"
+msgstr "ММА"
+
+msgctxt "#30009"
+msgid "Live"
+msgstr "Прямой эфир"
+
+msgctxt "#30010"
+msgid "Offline"
+msgstr "Законченные"
+
+msgctxt "#30011"
+msgid "Leagues Choice..."
+msgstr "Выбор турниров..."
+
+msgctxt "#30012"
+msgid "Refresh"
+msgstr "Обновить"
+
+msgctxt "#30013"
+msgid "UPDATE DATA ..."
+msgstr "ОБНОВЛЕНИЕ ДАННЫХ ..."
+
+msgctxt "#30014"
+msgid "Loading site data ..."
+msgstr "Загрузка данных сайта..."
+
+msgctxt "#30015"
+msgid "Changing settings ..."
+msgstr "Изменение настроек..."
+
+msgctxt "#30016"
+msgid "Stream information will be available 30 minutes prior to the begining of an event."
+msgstr "Информация о трансляциях станет доступна за 30 минут до начала матча."
+
+msgctxt "#30017"
+msgid "link scanning"
+msgstr "сканирование ссылок"
+
+msgctxt "#30018"
+msgid "End update..."
+msgstr "Конец обновлений..."
+
+msgctxt "#30019"
+msgid "Resource Unavailable or Invalid!"
+msgstr "Ресурс недоступен или недействителен!"
+
+msgctxt "#30020"
+msgid "Torrent not available or invalid!"
+msgstr "Торрент недоступен или недействителен!"
+
+msgctxt "#30021"
+msgid "wait..."
+msgstr "ожидание..."
+
+msgctxt "#30022"
+msgid "playback..."
+msgstr "воспроизведение..."
+
+msgctxt "#30023"
+msgid "prebuffering..."
+msgstr "пребуферизация..."
+
+msgctxt "#30024"
+msgid "Plugin data reset..."
+msgstr "Сброс данных плагина..."
+
+msgctxt "#30025"
+msgid "Choosing a Sports Tournament"
+msgstr "Выбор спортивного турнира"
+
+msgctxt "#30026"
+msgid "Plexus plugin required to view SopCast"
+msgstr "Для просмотра SopCast необходим плагин Plexus"
+
+msgctxt "#30027"
+msgid "After"
+msgstr "Через"
+
+msgctxt "#30028"
+msgid "STATISTICS:"
+msgstr "СТАТИСТИКА:"
+
+msgctxt "#30029"
+msgid "BROADCASTS:"
+msgstr "ТРАНСЛЯЦИИ:"
+
+msgctxt "#30030"
+msgid "REVIEWS:"
+msgstr "ОБЗОР:"
+
+msgctxt "#30031"
+msgid "GOAL"
+msgstr "ГОЛ"
+
+msgctxt "#30032"
+msgid "card"
+msgstr "карточка"
+
+msgctxt "#30033"
+msgid "came"
+msgstr "вышел"
+
+msgctxt "#30034"
+msgid "gone"
+msgstr "ушел"
+
+msgctxt "#30035"
+msgid "AUTOGOAL"
+msgstr "АВТОГОЛ"
+
+msgctxt "#30036"
+msgid "direct link to broadcast"
+msgstr "прямая ссылка на трансляцию"
+
+msgctxt "#30037"
+msgid "Updating Lists"
+msgstr "Обновление списков"
+
+msgctxt "#30038"
+msgid "Show date in list item"
+msgstr "Показывать дату в элементе списка"
+
+msgctxt "#30039"
+msgid "Show tournament in list item"
+msgstr "Показывать турнир в элементе списка"
+
+msgctxt "#30040"
+msgid "Extra"
+msgstr "Дополнительно"
+
+msgctxt "#30041"
+msgid "Select leagues to create ArtWork..."
+msgstr "Выбор турниров для создания ArtWork..."
+
+msgctxt "#30042"
+msgid "Completed"
+msgstr "Законченные"

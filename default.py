@@ -1,8 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-from resources.lib.pimpletv import PimpleTV
-
-plugin = PimpleTV()
+from resources.lib.pimpletv import plugin
 
 
 @plugin.action()

@@ -6,8 +6,10 @@ import xbmc
 # import xbmcaddon
 
 
-from default import plugin
-from resources.lib.plugin import Plugin
+# from default import plugin
+# from resources.lib.plugin import Plugin
+
+from resources.lib.pimpletv import plugin
 
 # Настройки после которых требуется обновление данных
 SETTING_UPDATE = [
