@@ -10,7 +10,7 @@ standard_library.install_aliases()
 import requests
 # import pickle
 # import re
-from . import simpleplugin, makeart
+from . import makeart, simpleplugin
 import xbmcgui
 import xbmc
 # import xbmcplugin
@@ -50,6 +50,7 @@ class PluginSport(simpleplugin.Plugin):
         super(PluginSport, self).__init__()
         global _
         self._dir = {'media': os.path.join(self.path, 'resources', 'media'),
+                     'data': os.path.join(self.path, 'resources', 'data'),
                      'font': os.path.join(self.path, 'resources', 'data', 'font'),
                      'lib': os.path.join(self.path, 'resources', 'lib'),
                      'thumb': os.path.join(self.profile_dir, 'thumb')}
@@ -839,46 +840,57 @@ class PimpleTV(PluginSport):
                             fanart = self.fanart
                             icon = self.icon
 
+
                             if self.is_create_artwork():
+                                try:
 
-                                art = makeart.ArtWorkFootBall(self,
-                                                              id=id_,
-                                                              date=self.time_to_local(date_utc),
-                                                              league=league,
-                                                              home=home,
-                                                              guest=away,
-                                                              logo_home=self._site +
-                                                                        col.find('div', 'home-logo').img['src'],
-                                                              logo_guest=self._site +
-                                                                        col.find('div', 'away-logo').img['src'])
+                                    file_art = os.path.join(self.dir('thumb'), '{}_{}_{}.png'.format(id_, '{}', '{}'))
 
-                                theme_artwork = self.get_setting('theme_artwork')
+                                    art_value = {
+                                        "league": league,
+                                        'logo_home': self._site + col.find('div', 'home-logo').img['src'],
+                                        'logo_guest': self._site + col.find('div', 'away-logo').img['src'],
+                                        "home": home,
+                                        'guest': away,
+                                        'weekday': makeart.weekday(self.time_to_local(date_utc), self._language),
+                                        'month': makeart.month(self.time_to_local(date_utc), self._language),
+                                        'time': makeart.time(self.time_to_local(date_utc)),
+                                    }
 
-                                self.log(theme_artwork)
+                                    art = makeart.ArtWork(self.dir('font'),
+                                                          os.path.join(self.dir('data'), 'layout.json'),
+                                                          art_value,
+                                                          self.log)
 
-                                art.language = self._language
+                                    theme_artwork = self.get_setting('theme_artwork')
 
-                                if theme_artwork == 0:  # Light
-                                    art.set_light_theme()
-                                elif theme_artwork == 1:  # Dark
-                                    art.set_dark_theme()
-                                elif theme_artwork == 2:  # Blue
-                                    art.set_blue_theme()
-                                elif theme_artwork == 3:  # Transparent
-                                    art.set_transparent_theme()
-                                else:
-                                    self.logd('_parse_listing', 'error set artwork theme')
-                                    art.set_light_theme()
+                                    file_art = file_art.format(theme_artwork, '{}')
 
-                                if self.get_setting('is_thumb'):
-                                    thumb = art.create_thumb()
-                                    self.logd('_parse_listing', thumb)
-                                if self.get_setting('is_fanart'):
-                                    fanart = art.create_fanart(background=fanart)
-                                    self.logd('_parse_listing', fanart)
-                                if self.get_setting('is_poster'):
-                                    poster = art.create_poster()
-                                    self.logd('_parse_listing', poster)
+                                    if theme_artwork == 0:  # Light
+                                        art.set_color_font([0, 0, 0])
+                                        art.set_background(os.path.join(self.dir('media'), 'light.png'))
+                                    elif theme_artwork == 1:  # Dark
+                                        art.set_background(os.path.join(self.dir('media'), 'dark.png'))
+                                    elif theme_artwork == 2:  # Blue
+                                        art.set_background(os.path.join(self.dir('media'), 'blue.png'))
+                                    elif theme_artwork == 3:  # Transparent
+                                        art.set_background(os.path.join(self.dir('media'), 'transparent.png'))
+                                    else:
+                                        self.logd('_parse_listing', 'error set artwork theme')
+
+                                    if self.get_setting('is_thumb'):
+                                        thumb = art.make_file(file_art.format('thumb'), 'thumb')
+                                        self.logd('_parse_listing', thumb)
+                                    if self.get_setting('is_fanart'):
+                                        art.set_background_type('fanart', self.fanart)
+                                        fanart = art.make_file(file_art.format('fanart'), 'fanart')
+                                        self.logd('_parse_listing', fanart)
+                                    if self.get_setting('is_poster'):
+                                        poster = art.make_file(file_art.format('poster'), 'poster')
+                                        self.logd('_parse_listing', poster)
+
+                                except Exception as e:
+                                    self.logd('ArtWork', 'ERROR [{}]'.format(str(e)))
 
                             if thumb:
                                 icon = thumb
