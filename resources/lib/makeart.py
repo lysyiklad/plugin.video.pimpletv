@@ -153,23 +153,24 @@ class ArtWork(object):
         self.log('make_file 1')
 
         try:
-            self.log('make_file 2')
             background = artwork['background']
-            # if background not in self._images:
-            #     img = Image.open(background)
-            #     self._images[background] = img
-            # else:
-            #     logo = self._images[background]
+            self.log('make_file background {}'.format(background))
+            if background not in self._images:
+                img = Image.open(background)
+                self._images[background] = img
+            else:
+                img = self._images[background]
             img = Image.open(background)
             if artwork['size'] is not None:
                 img = img.resize(tuple(artwork['size']), Image.ANTIALIAS)
+            self.log('make_file img {}'.format(img))
         except:
-            self.log('make_file 3')
             img = Image.new('RGBA', tuple(artwork['size']), color='black')
+            self.log('make_file except img {}'.format(img))
 
         draw = ImageDraw.Draw(img)
 
-        self.log('make_file 4')
+        self.log('make_file draw - {}'.format(draw))
 
         for art in artwork['data']:
             if art['key'] not in self._data and 'data' not in art:
@@ -179,22 +180,22 @@ class ArtWork(object):
             else:
                 value = self._data[art['key']]
             if art['type'] == 'text':
-                self.log('make_file 5 - {}'.format(value))
+                self.log('make_file text - {}'.format(value))
                 font = ImageFont.truetype(os.path.join(self._folder_font, art['font']), art['size'])
-                self.log('make_file 5 - {}'.format(font))
+                self.log('make_file text - {}'.format(font))
                 color = tuple(art['color'] if art['color'] is not None else artwork['color_font'])
-                self.log('make_file 5 - {}'.format(color))
+                self.log('make_file text - {}'.format(color))
                 draw_text(draw, value, font, art['x'], art['y'], color)
             elif art['type'] == 'picture':
-                self.log('make_file 6 - {}'.format(value))
+                self.log('make_file picture - {}'.format(value))
                 if value not in self._images:
                     logo = load_logo(value)
                     self._images[value] = logo
                 else:
                     logo = self._images[value]
-                self.log('make_file 6 - {}'.format(logo))
-                self.log('make_file 6 - {}'.format(art['size']))
-                self.log('make_file 6 - {}'.format(art['pos']))
+                self.log('make_file picture - {}'.format(logo))
+                self.log('make_file picture - {}'.format(art['size']))
+                self.log('make_file picture - {}'.format(art['pos']))
                 paste_logo(img, logo, art['size'], art['pos'])
             else:
                 continue

@@ -803,6 +803,15 @@ class PimpleTV(PluginSport):
         streams_day_soup = soup.findAll('div', {'class': 'streams-day'})
 
         i = 1
+        try:
+            total = len(soup.findAll('div', {'class': 'broadcast preview'}))
+        except:
+            total = 30
+
+        self.logd('_parse_listing', 'count games - {}'.format(total))
+
+        still = total
+        fill = 0
 
         for day_soup in streams_day_soup:
             day = '%s %s %s %s' % (
@@ -813,8 +822,7 @@ class PimpleTV(PluginSport):
             for row in list(day_soup.next_siblings):
                 try:
                     if row['class'] == ['row']:
-                        cols = row.findAll(
-                            'div', {'class': 'broadcast preview'})
+                        cols = row.findAll('div', {'class': 'broadcast preview'})
                         for col in cols:
 
                             str_time = col.find('div', 'bottom-line').span.text
@@ -901,9 +909,14 @@ class PimpleTV(PluginSport):
                             self.logd(
                                 'parse_listing', 'ADD MATCH - %s - %s' % (self.time_to_local(date_utc), match))
 
-                            i += 2
+                            # i += 2
+                            # if progress:
+                            #     progress.update(i, message=match)
+
                             if progress:
-                                progress.update(i, message=match)
+                                still = still - 1
+                                fill = 100 - int(100 * float(still) / total)
+                                progress.update(fill, message=match)
 
                             listing[id_] = {}
                             item = listing[id_]
@@ -924,6 +937,8 @@ class PimpleTV(PluginSport):
                         break
                 except Exception as e:
                     self.logd('parse_listing', e)
+
+
 
         return listing
 
