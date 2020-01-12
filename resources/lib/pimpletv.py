@@ -81,7 +81,6 @@ class PluginSport(simpleplugin.Plugin):
 
         self.load()
 
-
     @staticmethod
     def create_id(key):
         """
@@ -126,15 +125,17 @@ class PluginSport(simpleplugin.Plugin):
     def dir(self, dir_):
         return self._dir[dir_]
 
-    def get(self, id_, key):
+    def get_item(self, id_):
         item = self._listing.get(id_, None)
         if item is None:
             self.update()
             item = self._listing.get(id_, None)
             if item is None:
                 return None
+        return item
 
-        return item.get(key, None)
+    def get(self, id_, key):
+        return self.get_item(id_).get(key, None)
 
     def load(self):
         try:
@@ -252,33 +253,25 @@ class PluginSport(simpleplugin.Plugin):
         :param id_: id элемента
         :return:
         """
-        links = self.get(id_, 'href')
-        tnd = self._time_now_date(id_)
-        tsn = self._time_scan_now()
-        dt = self.get_setting('delta_links')
-
-        self.logd('links links', links)
-        self.logd('links self.date_scan', self.date_scan)
+        # import web_pdb
+        # web_pdb.set_trace()
 
         links = self.get(id_, 'href')
+        item = self.get_item(id_)
+        self.logd('links', 'item %s' % item)
+        self.logd('links', 'date_links %s' % item['date_links'])
+        scan_now = None
+        if links:
+            scan_now = int((self.time_now_utc() -item['date_links']).total_seconds() / 60)
 
-        self.logd('links links', links)
+        self.logd('links', 'id %s' % id_)
+        self.logd('links', links)
+        self.logd('links', 'scan_now %s' % scan_now)
 
-        # status = self.get(id_, 'status')
-        #
-        # if links and status == 'OFFLINE':
-        #     self.logd('links', 'id - %s  status - %s ' % (id_, status))
-        #     return links
+        if scan_now is None or self.get_setting('delta_links') < scan_now:
 
-        if not links or not self.date_scan or tsn > self.get_setting('delta_scan') or tsn > dt:  # and tnd < dt):
-            self.logd('links - id - %s : time now date - %s time scan now - %s' %
-                      (id_, tnd, tsn), links)
             try:
                 html = self.get_http(self.get(id_, 'url_links')).content
-                # file_html = os.path.join(self.path, 'links.html')
-                # if not os.path.exists(file_html):
-                #     with open(file_html, 'wb') as f:
-                #         f.write(html)
             except Exception as e:
                 xbmcgui.Dialog().notification(self.name, str(e), self.icon, 2000)
                 self.logd('ERROR LINKS', str(e))
@@ -288,8 +281,14 @@ class PluginSport(simpleplugin.Plugin):
                     return links
             del links[:]
             links.extend(self._parse_links(id_, html))
-            # if links and status == 'OFFLINE':
-            #     self.dump()
+
+            if links:
+                item['date_links'] = self.time_now_utc()
+            else:
+                item['date_links'] = None
+            self.logd('links', 'date_links %s' % item['date_links'])
+            if isdump:
+                self.dump()
 
         self.logd('self.get(%s, href)' % id_, self.get(id_, 'href'))
 
@@ -300,7 +299,6 @@ class PluginSport(simpleplugin.Plugin):
         Обновление списков для виртуальных папок, рисунков, удаление мусора, сохранение в pickle
         :return:
         """
-
 
         self.load()
 
@@ -589,6 +587,7 @@ class PluginSport(simpleplugin.Plugin):
 
         return int((self.get(id, 'date') - self.time_now_utc()).total_seconds() / 60)
 
+
     def _time_scan_now(self):
         """
         Время в минутах от последнего сканирования до текущего времени
@@ -747,6 +746,7 @@ class PluginSport(simpleplugin.Plugin):
             return True
         return False
 
+
 MONTHS = {u"января": u"January",
           u"февраля": u"February",
           u"марта": u"March",
@@ -783,6 +783,7 @@ class PimpleTV(PluginSport):
                             poster: '',
                             fanart: '',
                             url_links: '',
+                            date_links: datetime , должно быть осведомленное время в UTC,
                             href: [
                                     {
                                     'id': int,
@@ -848,7 +849,6 @@ class PimpleTV(PluginSport):
                             fanart = self.fanart
                             icon = self.icon
 
-
                             if self.is_create_artwork():
                                 try:
 
@@ -905,7 +905,6 @@ class PimpleTV(PluginSport):
                             else:
                                 thumb = icon
 
-
                             self.logd(
                                 'parse_listing', 'ADD MATCH - %s - %s' % (self.time_to_local(date_utc), match))
 
@@ -928,8 +927,9 @@ class PimpleTV(PluginSport):
                             item['icon'] = ''
                             item['poster'] = poster
                             item['fanart'] = fanart
+                            item['date_links'] = None
                             item['url_links'] = self._site + \
-                                col.find('div', 'live-teams').a['href']
+                                                col.find('div', 'live-teams').a['href']
                             if 'href' not in item:
                                 item['href'] = []
 
@@ -937,8 +937,6 @@ class PimpleTV(PluginSport):
                         break
                 except Exception as e:
                     self.logd('parse_listing', e)
-
-
 
         return listing
 
@@ -969,6 +967,13 @@ class PimpleTV(PluginSport):
                 'resol': td[3].text,
                 'href': td[5].find('a')['href'],
             })
+
+        # date_links = self.get(id_, 'date_links')
+        # if links:
+        #     date_links = self.time_now_utc()
+        # else:
+        #     date_links = None
+
 
         return links
 
@@ -1003,7 +1008,6 @@ class PimpleTV(PluginSport):
                       'url': self.get_url(action='play', href=link['href'], id=id),
                       'is_playable': True})
 
-
         if not l:
             return [{'label': 'Ссылок на трансляции нет, возможно появятся позже!',
                      'info': {'video': {'title': self._site, 'plot': self._site}},
@@ -1023,7 +1027,7 @@ class PimpleTV(PluginSport):
 
         now_utc = self.time_now_utc()
 
-        self.logd('pimpletv._get_listing()', '%s' %  self.time_to_local(now_utc))
+        self.logd('pimpletv._get_listing()', '%s' % self.time_to_local(now_utc))
 
         try:
             for item in self._listing.values():
@@ -1084,7 +1088,6 @@ class PimpleTV(PluginSport):
             self.logd('pimpletv._get_listing() ERROR', str(e))
 
         return listing
-
 
 
 plugin = PimpleTV()
