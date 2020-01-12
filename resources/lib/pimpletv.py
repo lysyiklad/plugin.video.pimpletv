@@ -471,7 +471,7 @@ class PluginSport(simpleplugin.Plugin):
                     purl = json_response["playback_url"]
                     self.logd('purl', purl)
 
-                    for i in range(30):
+                    for i in range(60):
                         xbmc.sleep(1000)
                         j = requests.get(stat_url).json()["response"]
                         if j == {}:
@@ -489,7 +489,7 @@ class PluginSport(simpleplugin.Plugin):
                                 str(j['peers']), str(j['speed_down']), str(int(j['downloaded'] / 1024)))
                             progress.update(i * 3, msg)
 
-                    if i == 29:
+                    if i == 59:
                         xbmcgui.Dialog().notification(
                             self.name, _('Torrent not available or invalid!'), self.icon, 500)
                         requests.get(stop_url)
