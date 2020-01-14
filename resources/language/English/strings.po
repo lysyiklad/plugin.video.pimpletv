@@ -122,6 +122,14 @@ msgctxt "#10027"
 msgid "Main menu"
 msgstr ""
 
+msgctxt "#10028"
+msgid "Playback without selecting links"
+msgstr ""
+
+msgctxt "#10029"
+msgid "Default link to play"
+msgstr ""
+
 
 
 

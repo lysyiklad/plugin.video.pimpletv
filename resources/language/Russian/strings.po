@@ -119,6 +119,17 @@ msgctxt "#10027"
 msgid "Main menu"
 msgstr "Главное меню"
 
+msgctxt "#10028"
+msgid "Playback without selecting links"
+msgstr "Воспроизведение без выбора ссылок"
+
+msgctxt "#10029"
+msgid "Default link to play"
+msgstr "Ссылка по умолчанию для воспроизведения"
+
+
+
+
 
 
 

@@ -10,7 +10,7 @@ standard_library.install_aliases()
 import requests
 # import pickle
 # import re
-from . import makeart, simpleplugin
+from . import simpleplugin
 import xbmcgui
 import xbmc
 # import xbmcplugin
@@ -67,10 +67,7 @@ class PluginSport(simpleplugin.Plugin):
 
         self._language = xbmc.getInfoLabel('System.Language')  # Russian English
 
-        if self._language != 'Russian':
-            self._site = os.path.join(self.get_setting('url_site'), 'en')
-        else:
-            self._site = self.get_setting('url_site')
+        self._site = self.get_setting('url_site')
 
         self._progress = xbmcgui.DialogProgressBG()
 
@@ -262,7 +259,7 @@ class PluginSport(simpleplugin.Plugin):
         self.logd('links', 'date_links %s' % item['date_links'])
         scan_now = None
         if links:
-            scan_now = int((self.time_now_utc() -item['date_links']).total_seconds() / 60)
+            scan_now = int((self.time_now_utc() - item['date_links']).total_seconds() / 60)
 
         self.logd('links', 'id %s' % id_)
         self.logd('links', links)
@@ -587,7 +584,6 @@ class PluginSport(simpleplugin.Plugin):
 
         return int((self.get(id, 'date') - self.time_now_utc()).total_seconds() / 60)
 
-
     def _time_scan_now(self):
         """
         Время в минутах от последнего сканирования до текущего времени
@@ -811,6 +807,8 @@ class PimpleTV(PluginSport):
 
         self.logd('_parse_listing', 'count games - {}'.format(total))
 
+        import_error = False
+
         still = total
         fill = 0
 
@@ -849,8 +847,9 @@ class PimpleTV(PluginSport):
                             fanart = self.fanart
                             icon = self.icon
 
-                            if self.is_create_artwork():
+                            if self.is_create_artwork() and not import_error:
                                 try:
+                                    from . import makeart
 
                                     file_art = os.path.join(self.dir('thumb'), '{}_{}_{}.png'.format(id_, '{}', '{}'))
 
@@ -896,6 +895,13 @@ class PimpleTV(PluginSport):
                                     if self.get_setting('is_poster'):
                                         poster = art.make_file(file_art.format('poster'), 'poster')
                                         self.logd('_parse_listing', poster)
+
+                                except ImportError as e:
+                                    self.logd('ArtWork', 'ImportError [{}]'.format(str(e)))
+                                    xbmcgui.Dialog().notification(self.name,
+                                                                  'ImportError, creation ArtWork is not possible!',
+                                                                  self.icon, 3000)
+                                    import_error = True
 
                                 except Exception as e:
                                     self.logd('ArtWork', 'ERROR [{}]'.format(str(e)))
@@ -973,7 +979,6 @@ class PimpleTV(PluginSport):
         #     date_links = self.time_now_utc()
         # else:
         #     date_links = None
-
 
         return links
 
